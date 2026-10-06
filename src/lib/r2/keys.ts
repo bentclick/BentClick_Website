@@ -20,5 +20,9 @@ export const r2Keys = {
   downloadVariant: (userId: string, collectionId: string, photoId: string, variant: "high" | "web") =>
     `${collectionRoot(userId, collectionId)}/downloads/${variant}/${photoId}.jpg`,
   brandAsset: (userId: string, name: string, extension: string) => `${root(userId)}/brand/${name}.${extension}`,
+  portfolioOriginal: (userId: string, albumId: string, imageId: string, extension: string) =>
+    `${root(userId)}/portfolio/${albumId}/originals/${imageId}.${extension}`,
+  portfolioPreview: (userId: string, albumId: string, imageId: string) => `${root(userId)}/portfolio/${albumId}/previews/${imageId}.webp`,
+  portfolioThumbnail: (userId: string, albumId: string, imageId: string) => `${root(userId)}/portfolio/${albumId}/thumbnails/${imageId}.webp`,
   collectionPrefix: collectionRoot,
 };

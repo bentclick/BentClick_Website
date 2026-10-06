@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
+import type { UploadAdapter } from "@/lib/uploads/upload-api";
 import { UploadQueue } from "@/lib/uploads/upload-queue";
 
 const REFRESH_THROTTLE_MS = 2500;
@@ -23,13 +24,16 @@ function throttled(refresh: Refresh): Refresh {
   };
 }
 
-/** One queue per editor; keeps running while the upload panel is closed. */
-export function useUploadQueue(target: { collectionId: string; galleryId: string }) {
+/**
+ * One queue per destination; keeps running while the upload panel is closed.
+ * `adapter` must be memoised by the caller.
+ */
+export function useUploadQueue(adapter: UploadAdapter) {
   const router = useRouter();
 
   const [queue] = useState(() => {
     const refreshSoon = throttled(() => router.refresh());
-    return new UploadQueue(target, {
+    return new UploadQueue(adapter, {
       onPhotoReady: refreshSoon,
       onIdle: ({ done, failed }) => {
         router.refresh();
@@ -43,7 +47,7 @@ export function useUploadQueue(target: { collectionId: string; galleryId: string
     });
   });
 
-  useEffect(() => queue.setTarget(target), [queue, target]);
+  useEffect(() => queue.setAdapter(adapter), [queue, adapter]);
 
   const items = useSyncExternalStore(queue.subscribe, queue.getSnapshot, queue.getSnapshot);
   return { queue, items };

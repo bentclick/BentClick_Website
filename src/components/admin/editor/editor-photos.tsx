@@ -11,6 +11,7 @@ import { UploadDialog } from "@/components/photos/upload-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useUploadQueue } from "@/hooks/use-upload-queue";
+import { collectionUploadAdapter } from "@/lib/uploads/upload-api";
 import { cn } from "@/lib/utils/cn";
 import type { EditorPhoto } from "@/types/photo";
 import { type GridSize, PhotoToolbar } from "./photo-toolbar";
@@ -31,8 +32,8 @@ type Props = {
 /** Orchestrates the gallery grid, uploads and photo actions; business rules live server-side. */
 export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Props) {
   const router = useRouter();
-  const target = useMemo(() => ({ collectionId, galleryId: gallery.id }), [collectionId, gallery.id]);
-  const { queue, items } = useUploadQueue(target);
+  const adapter = useMemo(() => collectionUploadAdapter({ collectionId, galleryId: gallery.id }), [collectionId, gallery.id]);
+  const { queue, items } = useUploadQueue(adapter);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [gridSize, setGridSize] = useState<GridSize>("m");
   const [selecting, setSelecting] = useState(false);
@@ -176,7 +177,7 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
         </button>
       ) : null}
 
-      <UploadDialog open={dialogOpen} onOpenChange={setDialogOpen} galleryName={gallery.name} queue={queue} items={items} />
+      <UploadDialog open={dialogOpen} onOpenChange={setDialogOpen} destinationLabel={`a galeria “${gallery.name}”`} queue={queue} items={items} />
 
       <Dialog open={confirmDelete !== null} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <DialogContent>

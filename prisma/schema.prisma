@@ -148,6 +148,7 @@ model User {
   emailLogs       EmailLog[]
   activityLogs    ActivityLog[]
   portfolioAlbums PortfolioAlbum[]
+  siteContent     SiteContent?
 
   @@map("user")
 }
@@ -596,22 +597,39 @@ model PortfolioAlbum {
 }
 
 model PortfolioImage {
-  id           String         @id @default(cuid())
-  albumId      String
-  album        PortfolioAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
-  storageKey   String         @unique
-  previewKey   String?
-  thumbnailKey String?
-  width        Int?
-  height       Int?
-  fileSize     BigInt
-  caption      String?
-  isCover      Boolean        @default(false)
-  sortOrder    Int            @default(0)
-  createdAt    DateTime       @default(now())
+  id            String         @id @default(cuid())
+  albumId       String
+  album         PortfolioAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  filename      String         @default("")
+  mimeType      String         @default("image/jpeg")
+  status        PhotoStatus    @default(PENDING_UPLOAD)
+  storageKey    String         @unique
+  previewKey    String?
+  thumbnailKey  String?
+  width         Int?
+  height        Int?
+  dominantColor String?
+  fileSize      BigInt
+  caption       String?
+  isCover       Boolean        @default(false)
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
 
   @@index([albumId, sortOrder])
+  @@index([albumId, status])
   @@map("portfolio_image")
+}
+
+/// Everything shown on the public website, editable from the admin (docs §9a).
+/// `data` is validated by a Zod schema with defaults (src/lib/validation/site-content.ts).
+model SiteContent {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  @@map("site_content")
 }
 
 // ─────────────────────────────────────────────────────────────

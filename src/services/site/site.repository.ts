@@ -41,3 +41,11 @@ export function listHeroImages(db: Db, userId: string, take: number) {
     select: publicImageSelect,
   });
 }
+
+/** Specific portfolio images chosen for the hero, owned and ready (any album, published or not). */
+export function listImagesByIds(db: Db, userId: string, ids: string[]) {
+  return db.portfolioImage.findMany({
+    where: { id: { in: ids }, status: "READY", previewKey: { not: null }, album: { userId } },
+    select: publicImageSelect,
+  });
+}

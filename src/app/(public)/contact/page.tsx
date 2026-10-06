@@ -1,32 +1,28 @@
-import { AtSign, Globe, Mail } from "lucide-react";
+import { AtSign, Globe, Mail, MessageCircle } from "lucide-react";
 import type { Metadata } from "next";
-import { getSiteProfile } from "@/services/site/site.service";
+import { getSite } from "@/services/site/site.service";
 
 export const metadata: Metadata = { title: "Contato" };
 export const revalidate = 600;
 
 export default async function ContactPage() {
-  const profile = await getSiteProfile();
+  const { profile, content } = await getSite();
+  const { contact } = content;
+  const instagram = profile?.instagram?.replace(/^@/, "");
+  const whatsapp = contact.whatsapp.replace(/\D/g, "");
+
   const channels = [
     profile?.email ? { icon: Mail, label: "E-mail", value: profile.email, href: `mailto:${profile.email}` } : null,
-    profile?.instagram
-      ? {
-          icon: AtSign,
-          label: "Instagram",
-          value: `@${profile.instagram.replace(/^@/, "")}`,
-          href: `https://instagram.com/${profile.instagram.replace(/^@/, "")}`,
-        }
-      : null,
+    whatsapp ? { icon: MessageCircle, label: "WhatsApp", value: contact.whatsapp, href: `https://wa.me/${whatsapp}` } : null,
+    instagram ? { icon: AtSign, label: "Instagram", value: `@${instagram}`, href: `https://instagram.com/${instagram}` } : null,
     profile?.websiteUrl ? { icon: Globe, label: "Site", value: profile.websiteUrl.replace(/^https?:\/\//, ""), href: profile.websiteUrl } : null,
   ].filter((c) => c !== null);
 
   return (
-    <main className="mx-auto max-w-3xl px-5 py-20 text-center sm:py-28">
-      <p className="eyebrow">Contato</p>
-      <h1 className="mt-5 font-serif text-5xl font-normal leading-[1.05] sm:text-6xl">Vamos contar a sua história.</h1>
-      <p className="mx-auto mt-6 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-        Conte um pouco sobre a data, o lugar e o que você imagina. Respondo pessoalmente.
-      </p>
+    <main id="contato" className="mx-auto max-w-3xl px-5 py-20 text-center sm:py-28">
+      {contact.eyebrow ? <p className="eyebrow">{contact.eyebrow}</p> : null}
+      <h1 className="mt-5 font-serif text-5xl font-normal leading-[1.05] sm:text-6xl">{contact.heading}</h1>
+      {contact.text ? <p className="mx-auto mt-6 max-w-md text-[15px] leading-relaxed text-muted-foreground">{contact.text}</p> : null}
 
       {channels.length > 0 ? (
         <ul className="mx-auto mt-14 grid max-w-md gap-px overflow-hidden rounded-[6px] border border-border bg-border text-left">

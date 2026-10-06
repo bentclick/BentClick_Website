@@ -1,5 +1,5 @@
 import { checkFile } from "./file-types";
-import { putFile, UploadApiError, uploadApi } from "./upload-api";
+import { putFile, type UploadAdapter, UploadApiError } from "./upload-api";
 
 export type UploadStatus = "queued" | "uploading" | "confirming" | "processing" | "done" | "failed";
 
@@ -32,8 +32,6 @@ function release(item: UploadItem) {
   if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
 }
 
-type Target = { collectionId: string; galleryId: string };
-
 const UPLOAD_CONCURRENCY = 4;
 const PROCESS_CONCURRENCY = 3;
 const PRESIGN_BATCH = 50;
@@ -61,12 +59,12 @@ export class UploadQueue {
   private resumed = new Set<string>();
 
   constructor(
-    private target: Target,
+    private api: UploadAdapter,
     private hooks: { onPhotoReady?: () => void; onIdle?: (summary: { done: number; failed: number }) => void } = {},
   ) {}
 
-  setTarget(target: Target) {
-    this.target = target;
+  setAdapter(api: UploadAdapter) {
+    this.api = api;
   }
 
   subscribe = (listener: () => void) => {
@@ -134,7 +132,7 @@ export class UploadQueue {
       this.patch(key, { status: "queued", error: undefined, progress: 0, url: undefined });
     } else {
       try {
-        const fresh = await uploadApi.resign(item.photoId);
+        const fresh = await this.api.resign(item.photoId);
         this.patch(key, { status: "queued", error: undefined, progress: 0, url: fresh.url, contentType: fresh.contentType });
       } catch (e) {
         this.patch(key, { error: message(e) });
@@ -168,10 +166,7 @@ export class UploadQueue {
     if (batch.length === 0) return;
     this.presigning = true;
     try {
-      const res = await uploadApi.presign({
-        ...this.target,
-        files: batch.map((i) => ({ clientId: i.key, name: i.name, type: i.file.type, size: i.size })),
-      });
+      const res = await this.api.presign(batch.map((i) => ({ clientId: i.key, name: i.name, type: i.file.type, size: i.size })));
       for (const u of res.uploads) this.patch(u.clientId, { url: u.url, photoId: u.photoId, contentType: u.contentType });
       for (const r of res.rejected) this.patch(r.clientId, { status: "failed", error: r.reason, retriable: false });
     } catch (e) {
@@ -224,7 +219,7 @@ export class UploadQueue {
     const ids = [...byPhoto.keys()].filter((id): id is string => Boolean(id));
     if (ids.length === 0) return;
     try {
-      const res = await uploadApi.complete(ids);
+      const res = await this.api.complete(ids);
       for (const id of res.completed) {
         const k = byPhoto.get(id);
         if (k) this.patch(k, { status: "processing" });
@@ -244,7 +239,7 @@ export class UploadQueue {
     while (this.processing < PROCESS_CONCURRENCY && this.processQueue.length > 0) {
       const photoId = this.processQueue.shift()!;
       this.processing++;
-      void uploadApi
+      void this.api
         .process(photoId)
         .then((r) => {
           const key = this.items.find((i) => i.photoId === photoId)?.key;

@@ -1,45 +1,31 @@
-import Link from "next/link";
 import { HomeHero } from "@/components/site/home-hero";
-import { PhotoMasonry } from "@/components/site/photo-masonry";
-import { getHeroImages, getPortfolioImages } from "@/services/site/site.service";
+import { HomeAbout, HomeContact, HomeWorks } from "@/components/site/home-sections";
+import { getHeroImages, getPortfolioImages, getSite } from "@/services/site/site.service";
 
-// Signed display URLs live for ≥ 6 h; re-render well inside that window.
+// Signed display URLs live for ≥ 6 h; edits revalidate immediately anyway.
 export const revalidate = 600;
 
-const VERSATILITY = ["Casamentos", "Eventos", "Retratos", "Ensaios", "Corporativo", "Produtos", "Viagens"];
-
+/** Hero first, then the sections in the order and visibility chosen in the site editor. */
 export default async function HomePage() {
-  const [heroImages, selected] = await Promise.all([getHeroImages(), getPortfolioImages(null, 12)]);
+  const { content, profile } = await getSite();
+  const showWorks = content.home.sections.some((s) => s.type === "works" && s.visible);
+  const [heroImages, works] = await Promise.all([getHeroImages(content), showWorks ? getPortfolioImages(null, content.works.count) : Promise.resolve([])]);
 
   return (
     <main>
-      <HomeHero images={heroImages} />
-
-      <section id="trabalhos" className="mx-auto max-w-[1600px] scroll-mt-20 px-5 py-24 sm:px-10 sm:py-32">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="eyebrow">Trabalhos</p>
-          <h2 className="mt-5 font-serif text-4xl font-normal leading-tight sm:text-5xl">
-            Pessoas, lugares e o que acontece entre eles.
-          </h2>
-          <p className="mx-auto mt-6 max-w-lg text-[14px] leading-relaxed text-muted-foreground">{VERSATILITY.join(" · ")}</p>
-        </div>
-
-        {selected.length > 0 ? (
-          <>
-            <PhotoMasonry images={selected} className="mt-16" />
-            <div className="mt-14 text-center">
-              <Link
-                href="/portfolio"
-                className="caps inline-flex h-12 items-center rounded-[4px] border border-taupe px-8 text-[11px] tracking-[0.18em] transition-colors duration-200 hover:border-foreground"
-              >
-                Ver portfólio completo
-              </Link>
-            </div>
-          </>
-        ) : (
-          <p className="mt-16 text-center font-serif text-2xl italic text-muted-foreground">Portfólio em breve.</p>
-        )}
-      </section>
+      <HomeHero images={heroImages} hero={content.hero} />
+      {content.home.sections
+        .filter((s) => s.visible)
+        .map((s) => {
+          switch (s.type) {
+            case "works":
+              return <HomeWorks key="works" works={content.works} images={works} />;
+            case "about":
+              return <HomeAbout key="about" about={content.about} fallbackTitle={profile?.name ?? "BentClick Fotografia"} />;
+            case "contact":
+              return <HomeContact key="contact" contact={content.contact} />;
+          }
+        })}
     </main>
   );
 }

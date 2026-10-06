@@ -15,12 +15,13 @@ type Tab = "send" | "drive" | "folder";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  galleryName: string;
+  /** e.g. "a galeria Destaques" or "o álbum Casamentos". */
+  destinationLabel: string;
   queue: UploadQueue;
   items: UploadItem[];
 };
 
-export function UploadDialog({ open, onOpenChange, galleryName, queue, items }: Props) {
+export function UploadDialog({ open, onOpenChange, destinationLabel, queue, items }: Props) {
   const [tab, setTab] = useState<Tab>("send");
 
   const { rows, hidden, done, active } = useMemo(() => {
@@ -45,7 +46,7 @@ export function UploadDialog({ open, onOpenChange, galleryName, queue, items }: 
         <div className="px-6 pt-6">
           <DialogTitle className="text-[26px]">Adicionar fotos</DialogTitle>
           <DialogDescription>
-            Para a galeria <span className="text-foreground">{galleryName}</span>. Os arquivos vão direto para o armazenamento privado.
+            Para {destinationLabel}. Os arquivos vão direto para o armazenamento privado.
           </DialogDescription>
 
           <div role="tablist" aria-label="Origem das fotos" className="mt-5 flex gap-6 border-b border-border">

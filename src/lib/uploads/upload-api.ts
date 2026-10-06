@@ -17,12 +17,33 @@ async function post<T>(url: string, body: unknown): Promise<T> {
   return data;
 }
 
-export const uploadApi = {
-  presign: (body: PresignRequest) => post<PresignResponse>("/api/uploads/presign", body),
-  resign: (photoId: string) => post<{ photoId: string; url: string; contentType: string }>("/api/uploads/resign", { photoId }),
-  complete: (photoIds: string[]) => post<CompleteResponse>("/api/uploads/complete", { photoIds }),
-  process: (photoId: string) => post<{ status: string; reason?: string }>(`/api/photos/${photoId}/process`, {}),
+type FileSpec = PresignRequest["files"][number];
+
+/** What the upload queue needs from a destination (collection gallery, portfolio album, …). */
+export type UploadAdapter = {
+  presign: (files: FileSpec[]) => Promise<PresignResponse>;
+  resign: (id: string) => Promise<{ url: string; contentType: string }>;
+  complete: (ids: string[]) => Promise<CompleteResponse>;
+  process: (id: string) => Promise<{ status: string; reason?: string }>;
 };
+
+export function collectionUploadAdapter(target: { collectionId: string; galleryId: string }): UploadAdapter {
+  return {
+    presign: (files) => post<PresignResponse>("/api/uploads/presign", { ...target, files }),
+    resign: (photoId) => post("/api/uploads/resign", { photoId }),
+    complete: (photoIds) => post<CompleteResponse>("/api/uploads/complete", { photoIds }),
+    process: (photoId) => post(`/api/photos/${photoId}/process`, {}),
+  };
+}
+
+export function portfolioUploadAdapter(albumId: string): UploadAdapter {
+  return {
+    presign: (files) => post<PresignResponse>("/api/portfolio/uploads/presign", { albumId, files }),
+    resign: (imageId) => post("/api/portfolio/uploads/resign", { imageId }),
+    complete: (imageIds) => post<CompleteResponse>("/api/portfolio/uploads/complete", { imageIds }),
+    process: (imageId) => post(`/api/portfolio/images/${imageId}/process`, {}),
+  };
+}
 
 /** PUT straight to object storage with progress. Bytes never touch the app server. */
 export function putFile(url: string, file: File, contentType: string, onProgress: (ratio: number) => void, signal: AbortSignal): Promise<void> {

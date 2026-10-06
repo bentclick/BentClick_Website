@@ -17,3 +17,6 @@ export type SiteProfile = {
   instagram: string | null;
   websiteUrl: string | null;
 };
+
+/** A portfolio photo that can be chosen in the site editor. */
+export type PickableImage = { id: string; thumbUrl: string; album: string };
