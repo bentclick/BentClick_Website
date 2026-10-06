@@ -1,18 +1,22 @@
 "use client";
 
-import { Eye } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { ArrowLeft, Eye, Heart, Send } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import type { PublicGalleryView } from "@/types/public-gallery";
+import type { PublicGalleryView, PublicPhoto } from "@/types/public-gallery";
+import { FavoriteButton } from "./favorite-button";
 import { GalleryCover } from "./gallery-cover";
-import { GalleryHeader } from "./gallery-header";
+import { GalleryHeader, HeaderAction } from "./gallery-header";
 import { Lightbox } from "./lightbox";
 import { LoadMoreSentinel, PhotoLayout } from "./photo-layout";
+import { SelectionDialog } from "./selection-dialog";
+import { useFavorites } from "./use-favorites";
 import { usePhotoPages } from "./use-photo-pages";
 
-async function shareLink(title: string) {
-  const url = window.location.href.split("?")[0]!;
+async function shareLink(title: string, slug: string) {
+  const url = `${window.location.origin}/g/${slug}`;
   try {
     if (navigator.share && window.matchMedia("(pointer: coarse)").matches) {
       await navigator.share({ title, url });
@@ -25,42 +29,70 @@ async function shareLink(title: string) {
   }
 }
 
+type Props = { view: PublicGalleryView; favoriteIds: string[]; initialMode?: "gallery" | "favorites" };
+
 /** Orchestrates the client gallery; access was already decided on the server. */
-export function ClientGallery({ view }: { view: PublicGalleryView }) {
+export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Props) {
   const firstId = view.galleries[0]?.id;
   const [active, setActive] = useState<string | undefined>(firstId);
+  const [mode, setMode] = useState(initialMode);
   const [lightbox, setLightbox] = useState<{ index: number; playing: boolean } | null>(null);
+  const [selectionOpen, setSelectionOpen] = useState(false);
   const { pages, ensure, loadMore } = usePhotoPages(view.slug, view.preview, firstId, view.firstPage);
+  const fav = useFavorites(view.slug, favoriteIds);
   const main = useRef<HTMLElement>(null);
 
+  // Hearts are for the client; the photographer's preview never creates sessions.
+  const canFavorite = view.features.favorites && !view.preview;
+  const showingFavorites = mode === "favorites" && canFavorite;
+
   const current = active ? pages[active] : undefined;
-  const photos = current?.photos ?? [];
-  const total = view.galleries.find((g) => g.id === active)?.count ?? photos.length;
-  const more = useCallback(() => active && loadMore(active), [active, loadMore]);
-  const share = () => void shareLink(view.title);
+  const photos: PublicPhoto[] = showingFavorites ? (fav.list ?? []) : (current?.photos ?? []);
+  const total = showingFavorites ? photos.length : (view.galleries.find((g) => g.id === active)?.count ?? photos.length);
+  const more = useCallback(() => {
+    if (!showingFavorites && active) loadMore(active);
+  }, [active, loadMore, showingFavorites]);
+  const share = () => void shareLink(view.title, view.slug);
+
+  const { list: favList, loadList } = fav;
+  useEffect(() => {
+    if (showingFavorites && favList === null) void loadList();
+  }, [showingFavorites, favList, loadList]);
 
   function enter() {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     main.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
   }
 
+  function openFavorites(on: boolean) {
+    setMode(on ? "favorites" : "gallery");
+    setLightbox(null);
+    window.history.replaceState(null, "", on ? `/g/${view.slug}/favorites` : `/g/${view.slug}`);
+    if (on) main.current?.scrollIntoView({ behavior: "auto" });
+  }
+
+  const heart = (photo: PublicPhoto) =>
+    canFavorite ? <FavoriteButton active={fav.ids.has(photo.id)} filename={photo.filename} onToggle={() => void fav.toggle(photo)} /> : null;
+
   return (
     <>
       {view.preview ? (
-        <div className="fixed inset-x-0 top-0 z-[70] flex items-center justify-center gap-2 bg-accent py-1.5 text-[11.5px] font-medium text-white">
-          <Eye className="size-3.5" /> Pré-visualização do fotógrafo — o cliente vê esta página somente após a publicação
+        <div className="fixed inset-x-0 top-0 z-[70] flex items-center justify-center gap-2 bg-accent px-3 py-1.5 text-center text-[11.5px] font-medium text-white">
+          <Eye className="size-3.5 shrink-0" /> Pré-visualização do fotógrafo — o cliente vê esta página somente após a publicação
         </div>
       ) : null}
 
-      <GalleryCover
-        title={view.title}
-        eventDate={view.eventDate}
-        coverUrl={view.coverUrl}
-        coverColor={view.coverColor}
-        canShare={view.features.share}
-        onEnter={enter}
-        onShare={share}
-      />
+      {initialMode === "gallery" ? (
+        <GalleryCover
+          title={view.title}
+          eventDate={view.eventDate}
+          coverUrl={view.coverUrl}
+          coverColor={view.coverColor}
+          canShare={view.features.share}
+          onEnter={enter}
+          onShare={share}
+        />
+      ) : null}
 
       <main ref={main} className="min-h-dvh bg-background">
         <GalleryHeader
@@ -69,10 +101,27 @@ export function ClientGallery({ view }: { view: PublicGalleryView }) {
           canShare={view.features.share}
           onShare={share}
           onSlideshow={() => photos.length && setLightbox({ index: 0, playing: true })}
-        />
+        >
+          {canFavorite ? <HeaderAction icon={Heart} label="Favoritos" onClick={() => openFavorites(!showingFavorites)} active={showingFavorites} badge={fav.count} /> : null}
+        </GalleryHeader>
 
         <div className="mx-auto max-w-[1800px] px-1.5 pb-24 sm:px-8">
-          {view.galleries.length > 1 ? (
+          {showingFavorites ? (
+            <div className="flex flex-col items-center gap-4 px-4 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
+              <button type="button" onClick={() => openFavorites(false)} className="inline-flex items-center gap-1.5 text-[12.5px] text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="size-3.5" /> Voltar para a galeria
+              </button>
+              <div>
+                <h2 className="font-serif text-3xl">Seus favoritos</h2>
+                <p className="mt-1 text-[12.5px] text-muted-foreground">
+                  {fav.count === 0 ? "Toque no coração das fotos que você mais gostou." : `${fav.count} ${fav.count === 1 ? "foto marcada" : "fotos marcadas"}`}
+                </p>
+              </div>
+              <Button onClick={() => setSelectionOpen(true)} disabled={fav.count === 0}>
+                <Send /> Enviar seleção
+              </Button>
+            </div>
+          ) : view.galleries.length > 1 ? (
             <nav aria-label="Galerias" className="-mx-1.5 overflow-x-auto px-4 sm:mx-0 sm:px-0">
               <ul className="flex min-w-max items-center gap-7 py-7 sm:justify-center">
                 {view.galleries.map((g) => (
@@ -99,23 +148,27 @@ export function ClientGallery({ view }: { view: PublicGalleryView }) {
             <div className="h-6" />
           )}
 
-          {photos.length === 0 && !current?.loading ? (
+          {photos.length === 0 && !(showingFavorites ? fav.loadingList || fav.list === null : current?.loading) ? (
             <p className="py-32 text-center font-serif text-2xl italic text-muted-foreground">
-              {view.galleries.length === 0 ? "As fotos estarão aqui em breve." : "Nenhuma foto nesta galeria."}
+              {showingFavorites ? "Nenhuma foto marcada ainda." : view.galleries.length === 0 ? "As fotos estarão aqui em breve." : "Nenhuma foto nesta galeria."}
             </p>
           ) : (
-            <PhotoLayout layout={view.layout} photos={photos} onOpen={(index) => setLightbox({ index, playing: false })} />
+            <PhotoLayout layout={view.layout} photos={photos} onOpen={(index) => setLightbox({ index, playing: false })} renderOverlay={heart} />
           )}
 
-          <LoadMoreSentinel onVisible={more} active={Boolean(current?.nextCursor) && !current?.loading} />
-          {current?.loading ? <p className="py-10 text-center text-[12px] text-muted-foreground">Carregando fotos…</p> : null}
-          {current?.error ? (
-            <p className="py-10 text-center text-[12px] text-muted-foreground">
-              Não foi possível carregar mais fotos.{" "}
-              <button type="button" onClick={more} className="text-foreground underline underline-offset-4">
-                Tentar de novo
-              </button>
-            </p>
+          {!showingFavorites ? (
+            <>
+              <LoadMoreSentinel onVisible={more} active={Boolean(current?.nextCursor) && !current?.loading} />
+              {current?.loading ? <p className="py-10 text-center text-[12px] text-muted-foreground">Carregando fotos…</p> : null}
+              {current?.error ? (
+                <p className="py-10 text-center text-[12px] text-muted-foreground">
+                  Não foi possível carregar mais fotos.{" "}
+                  <button type="button" onClick={more} className="text-foreground underline underline-offset-4">
+                    Tentar de novo
+                  </button>
+                </p>
+              ) : null}
+            </>
           ) : null}
 
           <footer className="mt-20 flex flex-col items-center gap-2 text-center text-[11px] text-muted-foreground">
@@ -136,8 +189,25 @@ export function ClientGallery({ view }: { view: PublicGalleryView }) {
           onTogglePlay={() => setLightbox((l) => (l ? { ...l, playing: !l.playing } : l))}
           onNeedMore={more}
           onShare={view.features.share ? share : undefined}
+          onShortcut={(key, photo) => key === "f" && canFavorite && void fav.toggle(photo)}
+          actions={(photo) =>
+            canFavorite ? (
+              <button
+                type="button"
+                onClick={() => void fav.toggle(photo)}
+                aria-pressed={fav.ids.has(photo.id)}
+                aria-label={fav.ids.has(photo.id) ? "Remover dos favoritos (F)" : "Favoritar (F)"}
+                title="Favoritar (F)"
+                className="grid size-11 place-items-center rounded-[4px] text-white/75 transition-colors hover:text-white active:scale-90"
+              >
+                <Heart strokeWidth={1.4} className={cn("size-5", fav.ids.has(photo.id) && "fill-white text-white")} />
+              </button>
+            ) : null
+          }
         />
       ) : null}
+
+      {canFavorite ? <SelectionDialog open={selectionOpen} onOpenChange={setSelectionOpen} slug={view.slug} count={fav.count} /> : null}
     </>
   );
 }

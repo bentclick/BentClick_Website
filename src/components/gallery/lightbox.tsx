@@ -20,8 +20,10 @@ type Props = {
   onTogglePlay: () => void;
   onNeedMore: () => void;
   onShare?: () => void;
-  /** Extra controls (favourite, download) injected by later phases. */
+  /** Extra controls (favourite, download) for the current photo. */
   actions?: (photo: PublicPhoto) => React.ReactNode;
+  /** Single-key shortcuts beyond navigation, e.g. "f" to favourite. */
+  onShortcut?: (key: string, photo: PublicPhoto) => void;
 };
 
 function IconButton({ label, onClick, children, active }: { label: string; onClick: () => void; children: React.ReactNode; active?: boolean }) {
@@ -40,7 +42,7 @@ function IconButton({ label, onClick, children, active }: { label: string; onCli
 }
 
 /** Full-screen viewer: keyboard (← → Esc), swipe with momentum, slideshow, neighbours preloaded. */
-export function Lightbox({ photos, index, total, playing, onIndex, onClose, onTogglePlay, onNeedMore, onShare, actions }: Props) {
+export function Lightbox({ photos, index, total, playing, onIndex, onClose, onTogglePlay, onNeedMore, onShare, actions, onShortcut }: Props) {
   const photo = photos[index];
   const [dx, setDx] = useState(0);
   const [settling, setSettling] = useState(false);
@@ -73,10 +75,11 @@ export function Lightbox({ photos, index, total, playing, onIndex, onClose, onTo
       if (e.key === "ArrowRight") go(1);
       else if (e.key === "ArrowLeft") go(-1);
       else if (e.key === "Escape") onClose();
+      else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && photos[index]) onShortcut?.(e.key.toLowerCase(), photos[index]);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [go, onClose]);
+  }, [go, onClose, onShortcut, photos, index]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;

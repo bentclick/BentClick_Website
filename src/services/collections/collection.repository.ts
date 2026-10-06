@@ -117,6 +117,10 @@ export function findOwnedCollectionForEditor(db: Db, userId: string, collectionI
   });
 }
 
+export function countSelections(db: Db, collectionId: string) {
+  return db.clientSession.count({ where: { collectionId, favorites: { some: {} } } });
+}
+
 export function slugExists(db: Db, slug: string) {
   return db.collection.count({ where: { slug } }).then((count) => count > 0);
 }

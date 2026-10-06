@@ -2,7 +2,7 @@
 
 import { Check, Loader2, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createGalleryAction, deleteGalleryAction, renameGalleryAction } from "@/actions/gallery.actions";
@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from "@/lib/utils/cn";
 
 type Gallery = { id: string; name: string; photoCount: number };
-type Props = { collectionId: string; galleries: Gallery[]; activeGalleryId: string | null };
+type Props = { collectionId: string; galleries: Gallery[] };
 
 function NameInput({ initial, onSubmit, onCancel, pending }: { initial: string; onSubmit: (name: string) => void; onCancel: () => void; pending: boolean }) {
   const [value, setValue] = useState(initial);
@@ -42,8 +42,10 @@ function NameInput({ initial, onSubmit, onCancel, pending }: { initial: string; 
   );
 }
 
-export function GalleryList({ collectionId, galleries, activeGalleryId }: Props) {
+export function GalleryList({ collectionId, galleries }: Props) {
   const router = useRouter();
+  const requested = useSearchParams().get("gallery");
+  const activeGalleryId = galleries.some((g) => g.id === requested) ? requested : (galleries[0]?.id ?? null);
   const [adding, setAdding] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();

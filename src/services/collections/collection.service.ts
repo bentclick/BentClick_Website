@@ -12,6 +12,7 @@ import { DomainError, NotFoundError } from "@/services/errors";
 import type { CollectionListItem } from "@/types/collection";
 import {
   countCollectionsForUser,
+  countSelections,
   countReadyPhotos,
   deleteCollectionRow,
   findOwnedCollection,
@@ -80,6 +81,7 @@ export const getCollectionForEditor = cache(async (userId: string, collectionId:
     status: effectiveStatus(collection.status, collection.expiresAt),
     coverUrl: await signDisplayUrl(coverPhoto?.previewKey ?? coverPhoto?.thumbnailKey),
     coverColor: coverPhoto?.dominantColor ?? null,
+    selectionCount: await countSelections(prisma, collection.id),
   };
 });
 
