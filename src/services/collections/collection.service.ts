@@ -9,6 +9,7 @@ import type { CollectionFilters, CreateCollectionInput } from "@/lib/validation/
 import { logActivity } from "@/services/activity/activity.repository";
 import { resolveClientId } from "@/services/clients/client.service";
 import { DomainError, NotFoundError } from "@/services/errors";
+import { countOutdatedPreviews } from "@/services/photos/preview-refresh.service";
 import type { CollectionListItem } from "@/types/collection";
 import {
   countCollectionsForUser,
@@ -84,6 +85,7 @@ export const getCollectionForEditor = cache(async (userId: string, collectionId:
     selectionCount: await countSelections(prisma, collection.id),
     readyPhotoCount: await countReadyPhotos(prisma, collection.id),
     expiryPassed: collection.expiresAt !== null && collection.expiresAt.getTime() <= Date.now(),
+    outdatedPreviews: await countOutdatedPreviews(collection.id),
   };
 });
 
@@ -96,6 +98,8 @@ export async function createCollection(userId: string, input: CreateCollectionIn
     uniqueSlug(),
     input.requirePassword ? hashGalleryPassword(input.password.trim()) : Promise.resolve(null),
   ]);
+
+  const profile = await prisma.photographerProfile.findUnique({ where: { userId }, select: { defaultLayout: true } });
 
   return prisma.$transaction(async (tx) => {
     const clientId = await resolveClientId(tx, userId, input.client);
@@ -123,6 +127,7 @@ export async function createCollection(userId: string, input: CreateCollectionIn
       allowSharing: input.allowSharing,
       downloadQuality: input.downloadQuality,
       watermarkId,
+      layout: profile?.defaultLayout ?? "EDITORIAL",
       galleries: { create: { name: DEFAULT_GALLERY_NAME, sortOrder: 0 } },
     });
   });

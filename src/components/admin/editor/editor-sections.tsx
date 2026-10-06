@@ -7,13 +7,12 @@ import { cn } from "@/lib/utils/cn";
 
 type Section = { slug: string; label: string; icon: typeof Images; enabled: boolean };
 
-// Sections without a page yet stay visible but inert, so the structure doesn't shift as they ship.
 export const EDITOR_SECTIONS: Section[] = [
   { slug: "", label: "Fotos", icon: Images, enabled: true },
   { slug: "selections", label: "Seleções", icon: Heart, enabled: true },
   { slug: "settings", label: "Configurações", icon: Settings2, enabled: true },
   { slug: "sharing", label: "Compartilhamento", icon: Share2, enabled: true },
-  { slug: "design", label: "Design", icon: Palette, enabled: false },
+  { slug: "design", label: "Design", icon: Palette, enabled: true },
   { slug: "activity", label: "Atividade", icon: Activity, enabled: true },
 ];
 

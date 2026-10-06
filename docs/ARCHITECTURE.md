@@ -283,7 +283,7 @@ Deletion semantics: deleting a Collection cascades to galleries, photos, session
 
 Everything a visitor sees on the public site and on gallery presentation must be editable by the photographer from ADM mode — texts, colours, photos, and adding/removing/reordering sections — without code changes. Copy written in components is only a **default seed**.
 
-Planned model (lands with Phase 11's portfolio management, before more public pages are added):
+Implemented (Phase 11) as a single `SiteContent` JSON document validated by `siteContentSchema` (per-field defaults, so older documents keep parsing), edited at `/dashboard/site`. The table below is the longer-term section model:
 
 | Model | Holds |
 |---|---|
@@ -334,15 +334,16 @@ Photographer branding in client galleries (logo, accent, font pair from a curate
 | # | Scope | Status |
 |---|---|---|
 | 1 | Foundation, auth, database, dashboard shell | done |
-| 2 | Collections CRUD, clients, galleries | list/filters/create/publish/archive/duplicate done · gallery CRUD next |
-| 3 | R2, presigned uploads, upload UI ("Adicionar fotos") | **done** — plus gallery create/rename/delete, set cover, delete photos |
-| 4 | Derivatives, gallery organisation | thumbnails/previews done · watermark, reorder, move between galleries next |
-| 5 | Client gallery cover, view, lightbox | — (design defined by identity reference) |
-| 6 | Favourites / selections | — |
-| 7 | Download authorisation, signed URLs, ZIP jobs | — |
-| 8 | Expiry, password/PIN, publishing | — |
-| 9 | Email (Resend) | — |
-| 10 | Analytics / activity | — |
-| 11 | Portfolio / public website | home, portfólio, sobre, contato, área do cliente done · portfolio management (dashboard) pending |
+| 2 | Collections CRUD, clients, galleries | done |
+| 3 | R2, presigned uploads, upload UI ("Adicionar fotos") | done |
+| 4 | Derivatives, gallery organisation | done |
+| 5 | Client gallery cover, view, lightbox | done |
+| 6 | Favourites / selections | done |
+| 7 | Download authorisation, signed URLs, ZIP jobs | done |
+| 8 | Expiry, password/PIN, publishing | done |
+| 9 | Email (Resend) | done |
+| 10 | Analytics / activity | done |
+| 11 | Portfolio / public website, admin-editable site content | done |
+| 12 | Settings, clients CRUD, watermarks (preview-only, versioned), collection Design tab | done |
 
 Public pages use ISR (`revalidate = 600`) and therefore read the database at build time.

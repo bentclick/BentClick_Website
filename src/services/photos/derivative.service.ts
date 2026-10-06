@@ -2,9 +2,11 @@ import "server-only";
 import type { PhotoStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { InvalidImageError, renderDerivatives } from "@/lib/images/derivatives";
+import { applyWatermark } from "@/lib/images/watermark";
 import { r2Keys } from "@/lib/r2/keys";
 import { deleteObjects, readObject, writeObject } from "@/lib/r2/objects";
 import { NotFoundError } from "@/services/errors";
+import { loadWatermarkSpec } from "@/services/watermarks/watermark.service";
 import { adjustCounters, claimForProcessing, findOwnedPhotos, findPhotoForProcessing, updatePhoto } from "./photo.repository";
 
 export type ProcessResult = { photoId: string; status: PhotoStatus | "REMOVED"; reason?: string };
@@ -12,7 +14,7 @@ export type ProcessResult = { photoId: string; status: PhotoStatus | "REMOVED"; 
 /**
  * Generates thumbnail + preview for one photo. One photo per invocation keeps
  * each request short; the browser fans out a few at a time after uploading.
- * Watermarking of the preview plugs in here (Phase: watermarks).
+ * The collection's watermark, if any, is composited onto the preview only.
  */
 export async function processPhoto(userId: string, photoId: string): Promise<ProcessResult> {
   const [owned] = await findOwnedPhotos(prisma, userId, [photoId]);
@@ -30,14 +32,19 @@ export async function processPhoto(userId: string, photoId: string): Promise<Pro
   try {
     const original = await readObject(photo.storageKey);
     const result = await renderDerivatives(original);
+    // The watermark goes on the preview only; thumbnails and originals stay clean.
+    const collection = await prisma.collection.findUnique({ where: { id: photo.collectionId }, select: { watermarkId: true } });
+    const watermark = await loadWatermarkSpec(collection?.watermarkId ?? null);
+    const preview = watermark ? await applyWatermark(result.preview, watermark.spec) : result.preview;
     const thumbnailKey = r2Keys.thumbnail(photo.userId, photo.collectionId, photo.id);
-    const previewKey = r2Keys.preview(photo.userId, photo.collectionId, photo.id);
-    await Promise.all([writeObject(thumbnailKey, result.thumbnail, "image/webp"), writeObject(previewKey, result.preview, "image/webp")]);
+    const previewKey = r2Keys.preview(photo.userId, photo.collectionId, photo.id, watermark?.stamp);
+    await Promise.all([writeObject(thumbnailKey, result.thumbnail, "image/webp"), writeObject(previewKey, preview, "image/webp")]);
 
     await updatePhoto(prisma, photo.id, {
       status: "READY",
       thumbnailKey,
       previewKey,
+      previewStamp: watermark?.stamp ?? null,
       width: result.width,
       height: result.height,
       dominantColor: result.dominantColor,

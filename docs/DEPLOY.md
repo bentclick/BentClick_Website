@@ -37,6 +37,9 @@ O banco vem antes do primeiro deploy porque o build aplica as migrações e as p
 | `GALLERY_TOKEN_SECRET` | segredo novo* |
 | `CRON_SECRET` | segredo novo* |
 | `ALLOW_SIGNUP` | `true` (só até criar sua conta — ver passo 4) |
+| `RESEND_API_KEY` | chave do Resend |
+| `EMAIL_FROM` | `BentClick <galerias@bentclick.com.br>` |
+| `RESEND_WEBHOOK_SECRET` | *Signing secret* do webhook do Resend (ver “E-mail”) |
 
 \* Gere cada um separadamente — **não reutilize os do `.env` local**:
 
@@ -120,8 +123,13 @@ O DNS fica no Cloudflare porque o R2 vai usar um subdomínio do mesmo domínio (
 
 ---
 
-## Depois (fase 9 — e-mail)
-Resend → **Domains → Add** `bentclick.com.br` → crie no Cloudflare os registros TXT/MX/CNAME que o Resend mostrar (nuvem cinza) → `RESEND_API_KEY` e `EMAIL_FROM="BentClick <galerias@bentclick.com.br>"` na Vercel.
+## E-mail (Resend)
+1. Resend → **Domains → Add** `bentclick.com.br` → crie no Registro.br os registros TXT/MX/CNAME que o Resend mostrar.
+2. Na Vercel: `RESEND_API_KEY` e `EMAIL_FROM="BentClick <galerias@bentclick.com.br>"`.
+3. Resend → **Webhooks → Add endpoint** `https://bentclick.com.br/api/webhooks/resend`, eventos `email.delivered`, `email.bounced`, `email.complained`, `email.failed` → copie o *Signing secret* (`whsec_…`) para `RESEND_WEBHOOK_SECRET` na Vercel e faça **Redeploy**.
+
+## Tarefas agendadas (cron)
+`vercel.json` agenda `/api/cron/expire` (03:00 UTC) e `/api/cron/cleanup` (03:30 UTC) uma vez por dia — o limite do plano Hobby. A Vercel envia `Authorization: Bearer $CRON_SECRET` automaticamente; basta a variável `CRON_SECRET` existir.
 
 ---
 
