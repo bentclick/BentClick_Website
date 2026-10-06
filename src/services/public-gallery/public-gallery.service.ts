@@ -140,5 +140,11 @@ export async function unlockWithPassword(slug: string, password: string) {
   if (!(await verifyGalleryPassword(collection.passwordHash, password))) {
     throw new DomainError("WRONG_PASSWORD", "Senha incorreta.");
   }
+  // Upgrade the visitor's existing session so favourites made before a password change survive.
+  const current = resolved.session;
+  if (current && current.accessVersion === collection.accessVersion && current.expiresAt.getTime() > Date.now()) {
+    await prisma.clientSession.update({ where: { id: current.id }, data: { passwordOk: true, lastSeenAt: new Date() } });
+    return;
+  }
   await openClientSession(collection, true);
 }

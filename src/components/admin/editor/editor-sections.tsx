@@ -11,7 +11,7 @@ type Section = { slug: string; label: string; icon: typeof Images; enabled: bool
 export const EDITOR_SECTIONS: Section[] = [
   { slug: "", label: "Fotos", icon: Images, enabled: true },
   { slug: "selections", label: "Seleções", icon: Heart, enabled: true },
-  { slug: "settings", label: "Configurações", icon: Settings2, enabled: false },
+  { slug: "settings", label: "Configurações", icon: Settings2, enabled: true },
   { slug: "sharing", label: "Compartilhamento", icon: Share2, enabled: false },
   { slug: "design", label: "Design", icon: Palette, enabled: false },
   { slug: "activity", label: "Atividade", icon: Activity, enabled: false },

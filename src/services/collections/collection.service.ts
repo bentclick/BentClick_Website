@@ -82,6 +82,8 @@ export const getCollectionForEditor = cache(async (userId: string, collectionId:
     coverUrl: await signDisplayUrl(coverPhoto?.previewKey ?? coverPhoto?.thumbnailKey),
     coverColor: coverPhoto?.dominantColor ?? null,
     selectionCount: await countSelections(prisma, collection.id),
+    readyPhotoCount: await countReadyPhotos(prisma, collection.id),
+    expiryPassed: collection.expiresAt !== null && collection.expiresAt.getTime() <= Date.now(),
   };
 });
 

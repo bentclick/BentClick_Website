@@ -25,6 +25,17 @@ export default async function CollectionEditorLayout({ params, children }: { par
           eventDate: collection.eventDate?.toISOString() ?? null,
           photoCount: collection.photoCount,
         }}
+        summary={{
+          hasCover: Boolean(collection.coverPhotoId),
+          readyPhotos: collection.readyPhotoCount,
+          expiresAt: collection.expiresAt?.toISOString() ?? null,
+          expiryPassed: collection.expiryPassed,
+          downloadQuality: collection.downloadQuality,
+          allowIndividualDownload: collection.allowIndividualDownload,
+          allowFullDownload: collection.allowFullDownload,
+          allowFavorites: collection.allowFavorites,
+          hasPassword: collection.hasPassword,
+        }}
       />
       <div className="lg:flex">
         <EditorRail collection={collection} galleries={collection.galleries} selectionCount={collection.selectionCount} />

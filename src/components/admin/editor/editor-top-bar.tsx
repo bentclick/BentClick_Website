@@ -3,11 +3,12 @@
 import { ArrowLeft, Eye, Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { publishCollectionAction, unpublishCollectionAction } from "@/actions/collection.actions";
+import { unpublishCollectionAction } from "@/actions/collection.actions";
 import { CollectionActionsMenu } from "@/components/admin/collections/collection-actions-menu";
 import { Button } from "@/components/ui/button";
+import { PublishDialog, type PublishSummary } from "./publish-dialog";
 import type { CollectionStatus } from "@/generated/prisma/enums";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { STATUS_LABELS } from "@/lib/constants/collection";
@@ -17,22 +18,28 @@ import { galleryUrl } from "@/lib/utils/urls";
 
 type Props = {
   collection: { id: string; title: string; slug: string; status: CollectionStatus; eventDate: string | null; photoCount: number };
+  summary: PublishSummary;
 };
 
-export function EditorTopBar({ collection }: Props) {
+export function EditorTopBar({ collection, summary }: Props) {
+  const [publishOpen, setPublishOpen] = useState(false);
   const router = useRouter();
   const copy = useCopyToClipboard();
   const [pending, startTransition] = useTransition();
   const isLive = collection.status === "PUBLISHED";
 
   function togglePublish() {
+    if (!isLive) {
+      setPublishOpen(true);
+      return;
+    }
     startTransition(async () => {
-      const result = isLive ? await unpublishCollectionAction(collection.id) : await publishCollectionAction(collection.id);
+      const result = await unpublishCollectionAction(collection.id);
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success(isLive ? "Galeria movida para rascunhos" : "Galeria publicada");
+      toast.success("Galeria movida para rascunhos");
       router.refresh();
     });
   }
@@ -84,6 +91,7 @@ export function EditorTopBar({ collection }: Props) {
           {isLive ? "Despublicar" : "Publicar"}
         </Button>
       </div>
+      <PublishDialog open={publishOpen} onOpenChange={setPublishOpen} collection={collection} summary={summary} />
     </header>
   );
 }
