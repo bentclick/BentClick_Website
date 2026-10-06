@@ -14,7 +14,7 @@ export const EDITOR_SECTIONS: Section[] = [
   { slug: "settings", label: "Configurações", icon: Settings2, enabled: true },
   { slug: "sharing", label: "Compartilhamento", icon: Share2, enabled: true },
   { slug: "design", label: "Design", icon: Palette, enabled: false },
-  { slug: "activity", label: "Atividade", icon: Activity, enabled: false },
+  { slug: "activity", label: "Atividade", icon: Activity, enabled: true },
 ];
 
 type Props = { collectionId: string; selectionCount: number; children: React.ReactNode };

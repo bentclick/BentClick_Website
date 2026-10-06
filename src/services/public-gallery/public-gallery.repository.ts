@@ -68,7 +68,3 @@ export function createClientSession(
 export function markCollectionExpired(db: Db, collectionId: string) {
   return db.collection.updateMany({ where: { id: collectionId, status: "PUBLISHED" }, data: { status: "EXPIRED" } });
 }
-
-export function touchCollectionAccess(db: Db, collectionId: string) {
-  return db.collection.update({ where: { id: collectionId }, data: { lastAccessedAt: new Date() }, select: { id: true } });
-}

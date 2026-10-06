@@ -148,3 +148,30 @@ export async function unlockWithPassword(slug: string, password: string) {
   }
   await openClientSession(collection, true);
 }
+
+const VIEW_WINDOW_SECONDS = 30 * 60;
+
+/**
+ * Who is looking, for analytics: the session when there is one, otherwise a
+ * keyed hash of the IP (raw addresses are never stored). Read before the response.
+ */
+export async function visitorKeyFor(resolved: ResolvedGallery): Promise<{ key: string; sessionId?: string }> {
+  if (resolved.decision.kind === "GRANTED" && resolved.decision.sessionValid && resolved.session) {
+    return { key: resolved.session.id, sessionId: resolved.session.id };
+  }
+  return { key: (await requestMeta()).ipHash };
+}
+
+/** One GALLERY_VIEWED per visitor per 30 minutes; owner previews never count. */
+export async function recordGalleryView(resolved: ResolvedGallery, visitor: { key: string; sessionId?: string }) {
+  if (resolved.decision.kind !== "GRANTED" || resolved.decision.preview) return;
+  const { collection } = resolved;
+  if (!(await consumeRateLimit(`view:${collection.id}:${visitor.key}`, 1, VIEW_WINDOW_SECONDS))) return;
+  await prisma.$transaction([
+    prisma.activityLog.create({
+      data: { userId: collection.userId, collectionId: collection.id, clientSessionId: visitor.sessionId, actorType: "CLIENT", type: "GALLERY_VIEWED" },
+    }),
+    prisma.collection.update({ where: { id: collection.id }, data: { lastAccessedAt: new Date() } }),
+    ...(visitor.sessionId ? [prisma.clientSession.update({ where: { id: visitor.sessionId }, data: { lastSeenAt: new Date() } })] : []),
+  ]);
+}
