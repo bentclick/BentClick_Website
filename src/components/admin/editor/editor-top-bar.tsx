@@ -16,7 +16,7 @@ import { formatDate } from "@/lib/utils/format";
 import { galleryUrl } from "@/lib/utils/urls";
 
 type Props = {
-  collection: { id: string; title: string; slug: string; status: CollectionStatus; eventDate: string | null };
+  collection: { id: string; title: string; slug: string; status: CollectionStatus; eventDate: string | null; photoCount: number };
 };
 
 export function EditorTopBar({ collection }: Props) {

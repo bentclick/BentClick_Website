@@ -464,7 +464,9 @@ model DownloadJob {
   type              DownloadKind
   quality           DownloadQuality
   status            DownloadJobStatus @default(QUEUED)
-  zipStorageKey     String?
+  /// sha256 of quality + sorted photo ids — identical requests reuse a ready archive.
+  fingerprint       String?
+  zipStorageKey     String? // single-part archives (kept for compatibility)
   fileCount         Int               @default(0)
   totalBytes        BigInt            @default(0)
   attempts          Int               @default(0)
@@ -476,10 +478,32 @@ model DownloadJob {
   updatedAt         DateTime          @updatedAt
 
   downloads Download[]
+  parts     DownloadArchivePart[]
 
   @@index([status, createdAt])
   @@index([collectionId, createdAt])
+  @@index([collectionId, fingerprint])
   @@map("download_job")
+}
+
+/// Large archives are split so each part is built within one function invocation.
+model DownloadArchivePart {
+  id            String            @id @default(cuid())
+  jobId         String
+  job           DownloadJob       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  index         Int
+  status        DownloadJobStatus @default(QUEUED)
+  photoIds      String[]
+  bytes         BigInt            @default(0)
+  zipStorageKey String?
+  attempts      Int               @default(0)
+  error         String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  @@unique([jobId, index])
+  @@index([status, startedAt])
+  @@map("download_archive_part")
 }
 
 // ─────────────────────────────────────────────────────────────

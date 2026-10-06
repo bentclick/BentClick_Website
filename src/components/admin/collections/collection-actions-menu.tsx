@@ -4,6 +4,7 @@ import {
   Archive,
   ArchiveRestore,
   CopyPlus,
+  Download,
   Eye,
   EyeOff,
   FolderOpen,
@@ -24,6 +25,7 @@ import {
   restoreCollectionAction,
   unpublishCollectionAction,
 } from "@/actions/collection.actions";
+import { ArchiveDialog } from "@/components/downloads/archive-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -40,7 +42,7 @@ import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import type { CollectionListItem } from "@/types/collection";
 
 type Props = {
-  collection: Pick<CollectionListItem, "id" | "title" | "slug" | "status">;
+  collection: Pick<CollectionListItem, "id" | "title" | "slug" | "status" | "photoCount">;
   triggerClassName?: string;
 };
 
@@ -49,6 +51,7 @@ export function CollectionActionsMenu({ collection, triggerClassName }: Props) {
   const copy = useCopyToClipboard();
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   const isLive = collection.status === "PUBLISHED" || collection.status === "EXPIRED";
   const isArchived = collection.status === "ARCHIVED";
@@ -118,6 +121,9 @@ export function CollectionActionsMenu({ collection, triggerClassName }: Props) {
           >
             <CopyPlus /> Duplicar
           </DropdownMenuItem>
+          <DropdownMenuItem disabled={collection.photoCount === 0} onSelect={() => setArchiveOpen(true)}>
+            <Download /> Baixar todas as fotos
+          </DropdownMenuItem>
           {isArchived ? (
             <DropdownMenuItem onSelect={() => run(() => restoreCollectionAction(collection.id), "Coleção restaurada")}>
               <ArchiveRestore /> Restaurar
@@ -133,6 +139,17 @@ export function CollectionActionsMenu({ collection, triggerClassName }: Props) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <ArchiveDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        title="Baixar coleção"
+        description="ZIP com os arquivos originais. Coleções grandes são divididas em partes."
+        options={[{ value: "all", label: "Todas as fotos (originais)", count: collection.photoCount }]}
+        createRequest={() => ({ url: `/api/collections/${collection.id}/archives`, body: { scope: "all" } })}
+        statusUrl={(id) => `/api/archives/${id}`}
+        partUrl={(id, index) => `/api/archives/${id}/parts/${index}`}
+      />
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>

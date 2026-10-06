@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { deleteObjects } from "@/lib/r2/objects";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
 import { DomainError, NotFoundError } from "@/services/errors";
+import { deliveryKeys } from "@/services/downloads/delivery.service";
 import { findOwnedGallery } from "@/services/galleries/gallery.repository";
 import type { EditorPhoto } from "@/types/photo";
 import { adjustCounters, deletePhotoRows, findOwnedPhotos, listGalleryPhotos } from "./photo.repository";
@@ -42,7 +43,14 @@ export async function deletePhotos(userId: string, photoIds: string[]): Promise<
   const photos = await findOwnedPhotos(prisma, userId, photoIds);
   if (photos.length !== photoIds.length) throw new NotFoundError("Photo");
 
-  await deleteObjects(photos.flatMap((p) => [p.storageKey, p.previewKey, p.thumbnailKey].filter((k): k is string => Boolean(k))));
+  await deleteObjects(
+    photos.flatMap((p) => [
+      p.storageKey,
+      p.previewKey,
+      p.thumbnailKey,
+      ...deliveryKeys({ id: p.id, userId, collectionId: p.collectionId }),
+    ].filter((k): k is string => Boolean(k))),
+  );
 
   await prisma.$transaction(async (tx) => {
     await deletePhotoRows(tx, photos.map((p) => p.id));

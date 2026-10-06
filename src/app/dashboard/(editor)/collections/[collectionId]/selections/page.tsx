@@ -41,7 +41,7 @@ export default async function SelectionsPage({ params, searchParams }: Props) {
               {detail.session.clientEmail ? ` · ${detail.session.clientEmail}` : ""}
             </p>
           </div>
-          <SelectionActions sessionId={detail.session.id} clientLabel={label} backHref={base} />
+          <SelectionActions sessionId={detail.session.id} collectionId={collection.id} count={detail.photos.length} clientLabel={label} backHref={base} />
         </header>
 
         <ul className="mt-8 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">

@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowLeft, Eye, Heart, Send } from "lucide-react";
+import { ArrowLeft, Download, Eye, Heart, Send } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ArchiveDialog } from "@/components/downloads/archive-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import type { PublicGalleryView, PublicPhoto } from "@/types/public-gallery";
@@ -38,12 +39,15 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
   const [mode, setMode] = useState(initialMode);
   const [lightbox, setLightbox] = useState<{ index: number; playing: boolean } | null>(null);
   const [selectionOpen, setSelectionOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const { pages, ensure, loadMore } = usePhotoPages(view.slug, view.preview, firstId, view.firstPage);
   const fav = useFavorites(view.slug, favoriteIds);
   const main = useRef<HTMLElement>(null);
 
   // Hearts are for the client; the photographer's preview never creates sessions.
   const canFavorite = view.features.favorites && !view.preview;
+  const canZip = view.features.fullDownload && !view.preview;
+  const totalPhotos = view.galleries.reduce((sum, g) => sum + g.count, 0);
   const showingFavorites = mode === "favorites" && canFavorite;
 
   const current = active ? pages[active] : undefined;
@@ -103,6 +107,7 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
           onSlideshow={() => photos.length && setLightbox({ index: 0, playing: true })}
         >
           {canFavorite ? <HeaderAction icon={Heart} label="Favoritos" onClick={() => openFavorites(!showingFavorites)} active={showingFavorites} badge={fav.count} /> : null}
+          {canZip ? <HeaderAction icon={Download} label="Baixar" onClick={() => setArchiveOpen(true)} /> : null}
         </GalleryHeader>
 
         <div className="mx-auto max-w-[1800px] px-1.5 pb-24 sm:px-8">
@@ -190,8 +195,19 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
           onNeedMore={more}
           onShare={view.features.share ? share : undefined}
           onShortcut={(key, photo) => key === "f" && canFavorite && void fav.toggle(photo)}
-          actions={(photo) =>
-            canFavorite ? (
+          actions={(photo) => (
+            <>
+              {view.features.download || view.preview ? (
+                <a
+                  href={`/g/${view.slug}/api/photos/${photo.id}/download${view.preview ? "?preview=1" : ""}`}
+                  aria-label="Baixar esta foto"
+                  title="Baixar esta foto"
+                  className="grid size-11 place-items-center rounded-[4px] text-white/75 transition-colors hover:text-white active:scale-90"
+                >
+                  <Download strokeWidth={1.4} className="size-5" />
+                </a>
+              ) : null}
+              {canFavorite ? (
               <button
                 type="button"
                 onClick={() => void fav.toggle(photo)}
@@ -202,12 +218,28 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
               >
                 <Heart strokeWidth={1.4} className={cn("size-5", fav.ids.has(photo.id) && "fill-white text-white")} />
               </button>
-            ) : null
-          }
+              ) : null}
+            </>
+          )}
         />
       ) : null}
 
       {canFavorite ? <SelectionDialog open={selectionOpen} onOpenChange={setSelectionOpen} slug={view.slug} count={fav.count} /> : null}
+
+      {canZip ? (
+        <ArchiveDialog
+          open={archiveOpen}
+          onOpenChange={setArchiveOpen}
+          description="Preparamos um arquivo ZIP com as fotos. Galerias grandes são divididas em partes."
+          options={[
+            { value: "all", label: "Todas as fotos", count: totalPhotos },
+            ...(canFavorite ? [{ value: "favorites", label: "Somente favoritas", count: fav.count }] : []),
+          ]}
+          createRequest={(scope) => ({ url: `/g/${view.slug}/api/archives`, body: { scope } })}
+          statusUrl={(id) => `/g/${view.slug}/api/archives/${id}`}
+          partUrl={(id, index) => `/g/${view.slug}/api/archives/${id}/parts/${index}`}
+        />
+      ) : null}
     </>
   );
 }

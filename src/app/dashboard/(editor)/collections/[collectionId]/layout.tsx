@@ -23,6 +23,7 @@ export default async function CollectionEditorLayout({ params, children }: { par
           slug: collection.slug,
           status: collection.status,
           eventDate: collection.eventDate?.toISOString() ?? null,
+          photoCount: collection.photoCount,
         }}
       />
       <div className="lg:flex">

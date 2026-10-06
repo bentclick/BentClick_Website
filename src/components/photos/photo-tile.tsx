@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, ImageIcon, Loader2, MoreHorizontal, RotateCcw, Star, Trash2 } from "lucide-react";
+import { AlertCircle, Check, Download, ImageIcon, Loader2, MoreHorizontal, RotateCcw, Star, Trash2 } from "lucide-react";
 import { memo } from "react";
 import {
   DropdownMenu,
@@ -92,6 +92,11 @@ export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, se
           <DropdownMenuContent className="min-w-44">
             <DropdownMenuItem disabled={photo.status !== "READY" || isCover} onSelect={onSetCover}>
               <Star /> {isCover ? "Capa atual" : "Definir como capa"}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href={`/api/photos/${photo.id}/download`}>
+                <Download /> Baixar original
+              </a>
             </DropdownMenuItem>
             {failed ? (
               <DropdownMenuItem onSelect={onRetry}>

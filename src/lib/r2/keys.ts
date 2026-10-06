@@ -15,6 +15,10 @@ export const r2Keys = {
   thumbnail: (userId: string, collectionId: string, photoId: string) =>
     `${collectionRoot(userId, collectionId)}/thumbnails/${photoId}.webp`,
   archive: (userId: string, downloadJobId: string) => `${root(userId)}/archives/${downloadJobId}.zip`,
+  archivePart: (userId: string, downloadJobId: string, index: number) => `${root(userId)}/archives/${downloadJobId}/parte-${index + 1}.zip`,
+  /** Lazily rendered download copies (high-res / web), cached next to the original. */
+  downloadVariant: (userId: string, collectionId: string, photoId: string, variant: "high" | "web") =>
+    `${collectionRoot(userId, collectionId)}/downloads/${variant}/${photoId}.jpg`,
   brandAsset: (userId: string, name: string, extension: string) => `${root(userId)}/brand/${name}.${extension}`,
   collectionPrefix: collectionRoot,
 };

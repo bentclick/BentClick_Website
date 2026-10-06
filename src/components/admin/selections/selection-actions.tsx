@@ -1,18 +1,20 @@
 "use client";
 
-import { ClipboardCopy, FileDown, Loader2, Trash2 } from "lucide-react";
+import { ClipboardCopy, Download, FileDown, Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { clearSelectionAction } from "@/actions/selection.actions";
+import { ArchiveDialog } from "@/components/downloads/archive-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
-type Props = { sessionId: string; clientLabel: string; backHref: string };
+type Props = { sessionId: string; collectionId: string; count: number; clientLabel: string; backHref: string };
 
-export function SelectionActions({ sessionId, clientLabel, backHref }: Props) {
+export function SelectionActions({ sessionId, collectionId, count, clientLabel, backHref }: Props) {
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
+  const [zipOpen, setZipOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const exportUrl = `/api/selections/${sessionId}/export`;
 
@@ -31,6 +33,9 @@ export function SelectionActions({ sessionId, clientLabel, backHref }: Props) {
 
   return (
     <div className="flex flex-wrap gap-2">
+      <Button size="sm" onClick={() => setZipOpen(true)} disabled={count === 0}>
+        <Download /> Baixar fotos (ZIP)
+      </Button>
       <Button variant="outline" size="sm" onClick={() => void copyNames()}>
         <ClipboardCopy /> Copiar nomes
       </Button>
@@ -42,6 +47,17 @@ export function SelectionActions({ sessionId, clientLabel, backHref }: Props) {
       <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => setConfirm(true)}>
         <Trash2 /> Limpar seleção
       </Button>
+
+      <ArchiveDialog
+        open={zipOpen}
+        onOpenChange={setZipOpen}
+        title="Baixar seleção"
+        description={`Originais das fotos escolhidas por ${clientLabel}.`}
+        options={[{ value: "selection", label: "Fotos selecionadas", count }]}
+        createRequest={() => ({ url: `/api/collections/${collectionId}/archives`, body: { scope: "selection", sessionId } })}
+        statusUrl={(id) => `/api/archives/${id}`}
+        partUrl={(id, index) => `/api/archives/${id}/parts/${index}`}
+      />
 
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
