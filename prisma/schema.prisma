@@ -1,0 +1,604 @@
+// BentClick — photography client-gallery platform.
+// See docs/ARCHITECTURE.md §9 for the relationship map.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
+enum CollectionStatus {
+  DRAFT
+  PUBLISHED
+  EXPIRED
+  ARCHIVED
+}
+
+enum CollectionCategory {
+  WEDDING
+  ENGAGEMENT
+  EVENT
+  BIRTHDAY
+  CORPORATE
+  GRADUATION
+  PORTRAIT
+  SESSION // ensaio
+  FAMILY
+  PRODUCT
+  TRAVEL
+  OTHER
+}
+
+enum PortfolioCategory {
+  WEDDING
+  EVENT
+  SESSION
+  PEOPLE
+  CORPORATE
+  TRAVEL
+  PRODUCT
+}
+
+enum DownloadQuality {
+  ORIGINAL
+  HIGH_RES
+  WEB
+}
+
+enum GalleryLayout {
+  MASONRY
+  EDITORIAL
+  GRID
+}
+
+enum PhotoStatus {
+  PENDING_UPLOAD // presigned URL issued, bytes not confirmed yet
+  UPLOADED // object confirmed in R2, derivatives pending
+  PROCESSING // derivative worker running
+  READY // thumbnail + preview available
+  FAILED
+}
+
+enum WatermarkType {
+  TEXT
+  IMAGE
+}
+
+enum WatermarkPosition {
+  CENTER
+  TOP_LEFT
+  TOP_RIGHT
+  BOTTOM_LEFT
+  BOTTOM_RIGHT
+}
+
+enum DownloadKind {
+  PHOTO
+  ALL
+  FAVORITES
+  GALLERY
+}
+
+enum DownloadJobStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  BOUNCED
+  FAILED
+}
+
+enum ActorType {
+  PHOTOGRAPHER
+  CLIENT
+  SYSTEM
+}
+
+enum ActivityType {
+  GALLERY_VIEWED
+  PHOTO_FAVORITED
+  PHOTO_UNFAVORITED
+  SELECTION_SUBMITTED
+  PHOTO_DOWNLOADED
+  ARCHIVE_DOWNLOADED
+  EMAIL_SENT
+  COLLECTION_PUBLISHED
+  COLLECTION_UNPUBLISHED
+  COLLECTION_ARCHIVED
+  COLLECTION_EXPIRED
+  EXPIRATION_CHANGED
+  LINK_REGENERATED
+  LINK_DISABLED
+  PASSWORD_CHANGED
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auth (Better Auth core tables — field names required by the adapter)
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions        Session[]
+  accounts        Account[]
+  profile         PhotographerProfile?
+  clients         Client[]
+  collections     Collection[]
+  photos          Photo[]
+  watermarks      Watermark[]
+  emailLogs       EmailLog[]
+  activityLogs    ActivityLog[]
+  portfolioAlbums PortfolioAlbum[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Photographer
+// ─────────────────────────────────────────────────────────────
+
+model PhotographerProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Brand
+  brandName         String
+  professionalTitle String  @default("Fotógrafo")
+  tagline           String?
+  bio               String?
+  logoKey           String?
+  faviconKey        String?
+  websiteUrl        String?
+  instagram         String?
+  accentColor       String  @default("#A27B5C")
+  serifFont         String  @default("cormorant")
+  sansFont          String  @default("geist")
+
+  // Gallery defaults (applied to new collections)
+  defaultExpiryDays              Int?
+  defaultAllowFavorites          Boolean         @default(true)
+  defaultAllowIndividualDownload Boolean         @default(true)
+  defaultAllowFullDownload       Boolean         @default(false)
+  defaultAllowSharing            Boolean         @default(true)
+  defaultDownloadQuality         DownloadQuality @default(HIGH_RES)
+  defaultLayout                  GalleryLayout   @default(EDITORIAL)
+  defaultWatermarkId             String?
+
+  // Email
+  replyToEmail   String?
+  emailSignature String?
+
+  // Storage (bytes). Usage is computed from Photo.fileSize — never stored here.
+  storageQuotaBytes BigInt @default(107374182400) // 100 GB
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("photographer_profile")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  collections Collection[]
+  emailLogs   EmailLog[]
+
+  @@unique([userId, email])
+  @@index([userId, name])
+  @@map("client")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Collections, galleries (sets inside a collection), photos
+// ─────────────────────────────────────────────────────────────
+
+model Collection {
+  id          String             @id @default(cuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  eventDate   DateTime?          @db.Date
+  category    CollectionCategory @default(OTHER)
+  status      CollectionStatus   @default(DRAFT)
+
+  // Share link — cryptographically random, never sequential.
+  slug        String  @unique
+  linkEnabled Boolean @default(true)
+
+  // Access
+  expiresAt     DateTime?
+  isPrivate     Boolean   @default(false) // hidden from photographer's public site listings
+  passwordHash  String? // argon2id; null = no PIN/password
+  // Bumped whenever slug/password changes → invalidates every ClientSession.
+  accessVersion Int       @default(1)
+
+  // Client features
+  allowFavorites          Boolean         @default(true)
+  allowIndividualDownload Boolean         @default(true)
+  allowFullDownload       Boolean         @default(false)
+  allowSharing            Boolean         @default(true)
+  requireClientIdentity   Boolean         @default(false) // ask name/email before favorites
+  downloadQuality         DownloadQuality @default(HIGH_RES)
+  layout                  GalleryLayout   @default(EDITORIAL)
+
+  coverPhotoId String?    @unique
+  coverPhoto   Photo?     @relation("CollectionCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
+  watermarkId  String?
+  watermark    Watermark? @relation(fields: [watermarkId], references: [id], onDelete: SetNull)
+
+  // Cached counters, maintained transactionally by services.
+  photoCount Int    @default(0)
+  totalBytes BigInt @default(0)
+
+  publishedAt    DateTime?
+  archivedAt     DateTime?
+  lastAccessedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  galleries      Gallery[]
+  photos         Photo[]         @relation("CollectionPhotos")
+  clientSessions ClientSession[]
+  favorites      Favorite[]
+  downloads      Download[]
+  downloadJobs   DownloadJob[]
+  emailLogs      EmailLog[]
+  activityLogs   ActivityLog[]
+
+  @@index([userId, status, updatedAt])
+  @@index([userId, eventDate])
+  @@index([status, expiresAt])
+  @@map("collection")
+}
+
+model Gallery {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  name         String
+  sortOrder    Int        @default(0)
+  photoCount   Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  photos       Photo[]
+  downloadJobs DownloadJob[]
+
+  @@index([collectionId, sortOrder])
+  @@map("gallery")
+}
+
+model Photo {
+  id           String     @id @default(cuid())
+  // Denormalised owner for fast storage aggregation and ownership checks.
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collectionId String
+  collection   Collection @relation("CollectionPhotos", fields: [collectionId], references: [id], onDelete: Cascade)
+  galleryId    String
+  gallery      Gallery    @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  filename         String // sanitised display name
+  originalFilename String
+  mimeType         String
+  fileSize         BigInt
+  width            Int?
+  height           Int?
+  dominantColor    String? // placeholder colour while the preview loads
+
+  storageKey    String      @unique // originals/…
+  previewKey    String? // previews/… (watermarked when collection has a watermark)
+  thumbnailKey  String? // thumbnails/…
+  status        PhotoStatus @default(PENDING_UPLOAD)
+  failureReason String?
+
+  isFeatured Boolean   @default(false)
+  sortOrder  Int       @default(0)
+  takenAt    DateTime?
+  metadata   Json? // EXIF subset
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  coverOf   Collection? @relation("CollectionCover")
+  favorites Favorite[]
+  downloads Download[]
+
+  @@index([galleryId, status, sortOrder])
+  @@index([collectionId, status])
+  @@index([userId])
+  @@index([status, createdAt])
+  @@map("photo")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Client-side access (no accounts): sessions, favorites, downloads
+// ─────────────────────────────────────────────────────────────
+
+model ClientSession {
+  id                   String     @id @default(cuid())
+  collectionId         String
+  collection           Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  tokenHash            String     @unique // SHA-256 of the httpOnly cookie token
+  accessVersion        Int // must equal Collection.accessVersion to be valid
+  passwordOk           Boolean    @default(false)
+  clientName           String?
+  clientEmail          String?
+  selectionSubmittedAt DateTime?
+  userAgent            String?
+  ipHash               String?
+  expiresAt            DateTime
+  lastSeenAt           DateTime   @default(now())
+  createdAt            DateTime   @default(now())
+
+  favorites    Favorite[]
+  downloads    Download[]
+  downloadJobs DownloadJob[]
+  activityLogs ActivityLog[]
+
+  @@index([collectionId, createdAt])
+  @@map("client_session")
+}
+
+model Favorite {
+  id              String        @id @default(cuid())
+  collectionId    String
+  collection      Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  clientSessionId String
+  clientSession   ClientSession @relation(fields: [clientSessionId], references: [id], onDelete: Cascade)
+  photoId         String
+  photo           Photo         @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@unique([clientSessionId, photoId])
+  @@index([collectionId, clientSessionId])
+  @@map("favorite")
+}
+
+model Download {
+  id              String          @id @default(cuid())
+  collectionId    String
+  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  photoId         String?
+  photo           Photo?          @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  clientSessionId String?
+  clientSession   ClientSession?  @relation(fields: [clientSessionId], references: [id], onDelete: SetNull)
+  downloadJobId   String?
+  downloadJob     DownloadJob?    @relation(fields: [downloadJobId], references: [id], onDelete: SetNull)
+  kind            DownloadKind
+  quality         DownloadQuality
+  bytes           BigInt?
+  ipHash          String?
+  createdAt       DateTime        @default(now())
+
+  @@index([collectionId, createdAt])
+  @@map("download")
+}
+
+model DownloadJob {
+  id                String            @id @default(cuid())
+  collectionId      String
+  collection        Collection        @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  galleryId         String?
+  gallery           Gallery?          @relation(fields: [galleryId], references: [id], onDelete: SetNull)
+  clientSessionId   String?
+  clientSession     ClientSession?    @relation(fields: [clientSessionId], references: [id], onDelete: SetNull)
+  requestedByUserId String? // set when the photographer requests the archive
+  type              DownloadKind
+  quality           DownloadQuality
+  status            DownloadJobStatus @default(QUEUED)
+  zipStorageKey     String?
+  fileCount         Int               @default(0)
+  totalBytes        BigInt            @default(0)
+  attempts          Int               @default(0)
+  error             String?
+  expiresAt         DateTime? // archive object lifetime in R2
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  downloads Download[]
+
+  @@index([status, createdAt])
+  @@index([collectionId, createdAt])
+  @@map("download_job")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Watermarks, email, activity
+// ─────────────────────────────────────────────────────────────
+
+model Watermark {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  type            WatermarkType
+  text            String?
+  imageStorageKey String?
+  color           String            @default("#FFFFFF")
+  opacity         Float             @default(0.5) // 0..1
+  size            Float             @default(0.2) // fraction of the image's shorter side
+  position        WatermarkPosition @default(CENTER)
+  margin          Int               @default(32) // px at preview resolution
+  tile            Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  collections Collection[]
+
+  @@index([userId])
+  @@map("watermark")
+}
+
+model EmailLog {
+  id                String      @id @default(cuid())
+  userId            String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collectionId      String?
+  collection        Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  clientId          String?
+  client            Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  recipient         String
+  subject           String
+  status            EmailStatus @default(QUEUED)
+  providerMessageId String?     @unique
+  error             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([userId, createdAt])
+  @@map("email_log")
+}
+
+model ActivityLog {
+  id              String         @id @default(cuid())
+  userId          String // collection owner — every row is scoped to a photographer
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collectionId    String?
+  collection      Collection?    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  clientSessionId String?
+  clientSession   ClientSession? @relation(fields: [clientSessionId], references: [id], onDelete: SetNull)
+  actorType       ActorType
+  type            ActivityType
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+
+  @@index([collectionId, type, createdAt])
+  @@index([userId, createdAt])
+  @@map("activity_log")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Public portfolio — deliberately separate from client deliveries
+// ─────────────────────────────────────────────────────────────
+
+model PortfolioAlbum {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String
+  description String?
+  category    PortfolioCategory @default(PEOPLE)
+  isPublished Boolean           @default(false)
+  sortOrder   Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  images PortfolioImage[]
+
+  @@unique([userId, slug])
+  @@index([userId, isPublished, category])
+  @@map("portfolio_album")
+}
+
+model PortfolioImage {
+  id           String         @id @default(cuid())
+  albumId      String
+  album        PortfolioAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  storageKey   String         @unique
+  previewKey   String?
+  thumbnailKey String?
+  width        Int?
+  height       Int?
+  fileSize     BigInt
+  caption      String?
+  isCover      Boolean        @default(false)
+  sortOrder    Int            @default(0)
+  createdAt    DateTime       @default(now())
+
+  @@index([albumId, sortOrder])
+  @@map("portfolio_image")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Infrastructure
+// ─────────────────────────────────────────────────────────────
+
+// Fixed-window rate limiting that works on serverless without Redis.
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@map("rate_limit_bucket")
+}

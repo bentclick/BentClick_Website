@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+/* ─── BentClick design tokens (docs/ARCHITECTURE.md §10) ───── */
+:root {
+  --background: #f8f7f4; /* warm off-white */
+  --surface: #ffffff;
+  --foreground: #111111; /* near black */
+  --muted-foreground: #77736d;
+  --border: #e8e5df;
+  --taupe: #d9d0c6; /* secondary borders, quiet fills */
+  --subtle: #f3efea; /* hover / active fills, taupe-tinted */
+  --accent: #a27b5c; /* warm brown — used sparingly */
+  --accent-hover: #8b674c;
+  --accent-soft: #f2ebe4;
+  --accent-foreground: #ffffff;
+  --danger: #a33a2f;
+  --success: #4f6b4a;
+  --success-soft: #e9efe6;
+  --warning: #a0652a;
+  --warning-soft: #f6ecdf;
+  --gallery-dark: #111111;
+  --overlay: rgba(0, 0, 0, 0.35);
+  --ring: #a27b5c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-taupe: var(--taupe);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-gallery-dark: var(--gallery-dark);
+  --color-overlay: var(--overlay);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), "Iowan Old Style", Georgia, serif;
+
+  --animate-fade-in: fade-in 180ms ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: none; }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 22%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Small tracked caps used for section labels and editorial navigation. */
+@utility eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+@utility caps {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}

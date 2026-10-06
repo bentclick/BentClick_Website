@@ -1,0 +1,13 @@
+# Local PostgreSQL for development.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bentclick
+      POSTGRES_PASSWORD: bentclick
+      POSTGRES_DB: bentclick
+    ports: ["127.0.0.1:55462:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+volumes:
+  pgdata:
