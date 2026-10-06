@@ -1,4 +1,4 @@
-# Local PostgreSQL for development.
+# Local development services.
 services:
   db:
     image: postgres:17-alpine
@@ -9,5 +9,15 @@ services:
       POSTGRES_DB: bentclick
     ports: ["127.0.0.1:55462:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
+
+  # S3-compatible stand-in for Cloudflare R2 in local development
+  # (point R2_ENDPOINT at it). Accepts any credentials; never used in production.
+  storage:
+    image: adobe/s3mock:latest
+    restart: unless-stopped
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: bentclick-media
+    ports: ["127.0.0.1:59090:9090"]
+
 volumes:
   pgdata:

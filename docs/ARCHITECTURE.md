@@ -224,7 +224,11 @@ Changing a collection's watermark re-queues preview regeneration only.
  poll / revalidate grid  ◀──────────────────────────────────────────────────────────
 ```
 
-- Client queue states: `queued → uploading → uploaded | failed` (retry button re-requests a fresh presigned URL for the same `photoId`).
+- **Implemented (Phase 3):** `POST /api/uploads/presign` → browser `PUT` (4 parallel, XHR progress, 2 automatic retries) → `POST /api/uploads/complete` (HEAD-verified) → `POST /api/photos/:id/process`.
+- **Derivatives run in a Vercel function, one photo per call** (`maxDuration` 60 s, `sharp`), fanned out 3 at a time by the browser right after upload. Bytes flow R2 → function → R2 only; the browser→server upload path never carries photo bytes. Photos left `UPLOADED` by a closed tab are resumed the next time the gallery opens. A queue worker remains the scale-up path for very large batches.
+- Client queue states: `queued → uploading → confirming → processing → done | failed` (`src/lib/uploads/upload-queue.ts`); retry re-requests a fresh presigned URL for the same `photoId` (`/api/uploads/resign`).
+- Content that isn't a real JPEG/PNG/WebP (checked by `sharp`, not the declared MIME) is deleted along with its row.
+- Local development uses `adobe/s3mock` (docker compose `storage`, `R2_ENDPOINT`) as the S3-compatible stand-in.
 - Magic-byte sniffing in the worker rejects files whose content does not match the declared MIME (→ `FAILED`, object deleted).
 - Cron `cleanup`: `PENDING_UPLOAD` older than 24 h → delete row (+ object if present).
 - RAW files (`.cr3`, `.nef`, `.arw`, `.dng`) are stored as originals only; no derivatives, hidden from client galleries unless explicitly enabled.
@@ -331,8 +335,8 @@ Photographer branding in client galleries (logo, accent, font pair from a curate
 |---|---|---|
 | 1 | Foundation, auth, database, dashboard shell | done |
 | 2 | Collections CRUD, clients, galleries | list/filters/create/publish/archive/duplicate done · gallery CRUD next |
-| 3 | R2, presigned uploads, upload UI ("Adicionar fotos") | next |
-| 4 | Derivative worker, gallery organisation | — |
+| 3 | R2, presigned uploads, upload UI ("Adicionar fotos") | **done** — plus gallery create/rename/delete, set cover, delete photos |
+| 4 | Derivatives, gallery organisation | thumbnails/previews done · watermark, reorder, move between galleries next |
 | 5 | Client gallery cover, view, lightbox | — (design defined by identity reference) |
 | 6 | Favourites / selections | — |
 | 7 | Download authorisation, signed URLs, ZIP jobs | — |

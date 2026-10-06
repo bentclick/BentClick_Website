@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 import { SwitchField } from "@/components/ui/switch-field";
 import type { CollectionListItem } from "@/types/collection";
+import type { EditorPhoto } from "@/types/photo";
+import { EditorPhotos } from "@/components/admin/editor/editor-photos";
 
 export const metadata: Metadata = { title: "Identidade visual", robots: { index: false } };
 
@@ -30,6 +32,13 @@ const SAMPLE: CollectionListItem[] = [
   { id: "c2", title: "Ensaio Praia", slug: "BBBBBBBBBBBB", clientName: null, category: "SESSION", status: "DRAFT", eventDate: "2026-09-12T00:00:00.000Z", expiresAt: null, photoCount: 158, favoriteCount: 0, coverUrl: null, coverColor: null, updatedAt: inDays(0) },
   { id: "c3", title: "Evento Empresarial", slug: "CCCCCCCCCCCC", clientName: "Grupo Norte", category: "CORPORATE", status: "PUBLISHED", eventDate: "2026-08-20T00:00:00.000Z", expiresAt: inDays(15), photoCount: 432, favoriteCount: 0, coverUrl: null, coverColor: null, updatedAt: inDays(0) },
   { id: "c4", title: "Aniversário Julia", slug: "DDDDDDDDDDDD", clientName: "Julia", category: "BIRTHDAY", status: "EXPIRED", eventDate: "2026-07-05T00:00:00.000Z", expiresAt: inDays(-3), photoCount: 322, favoriteCount: 12, coverUrl: null, coverColor: null, updatedAt: inDays(0) },
+];
+
+const SAMPLE_PHOTOS: EditorPhoto[] = [
+  { id: "cdevphoto1", filename: "DSC_1024.jpg", status: "READY", width: 3000, height: 2000, sizeBytes: 8_400_000, thumbnailUrl: null, color: "#a27b5c", isRaw: false, failureReason: null },
+  { id: "cdevphoto2", filename: "DSC_1025.jpg", status: "PROCESSING", width: null, height: null, sizeBytes: 7_100_000, thumbnailUrl: null, color: null, isRaw: false, failureReason: null },
+  { id: "cdevphoto3", filename: "DSC_1026.CR3", status: "UPLOADED", width: null, height: null, sizeBytes: 41_000_000, thumbnailUrl: null, color: null, isRaw: true, failureReason: null },
+  { id: "cdevphoto4", filename: "DSC_1027.jpg", status: "FAILED", width: null, height: null, sizeBytes: 6_800_000, thumbnailUrl: null, color: null, isRaw: false, failureReason: "Falha ao gerar a pré-visualização" },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -134,6 +143,18 @@ export default function BrandBoardPage() {
             <SwitchField id="demo-c" label="Exigir senha" />
           </div>
         </div>
+      </Section>
+
+      <Section title="Editor — fotos e envio">
+        <p className="mb-6 text-[13px] text-muted-foreground">
+          Amostra sem sessão: envios feitos aqui são recusados pelo servidor (exibe o estado de erro).
+        </p>
+        <EditorPhotos
+          collectionId="cdevpreview000000000000000"
+          gallery={{ id: "cdevgallery000000000000000", name: "Destaques", photoCount: SAMPLE_PHOTOS.length }}
+          photos={SAMPLE_PHOTOS}
+          coverPhotoId="cdevphoto1"
+        />
       </Section>
 
       <Section title="Painel — coleções">
