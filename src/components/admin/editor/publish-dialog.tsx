@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, ExternalLink, Loader2, X } from "lucide-react";
+import { Check, Copy, ExternalLink, Loader2, Mail, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -125,6 +125,11 @@ export function PublishDialog({ open, onOpenChange, collection, summary }: Props
                 <Copy /> Copiar link
               </Button>
               <Button asChild variant="outline">
+                <Link href={`/dashboard/collections/${collection.id}/sharing`} onClick={() => handleOpenChange(false)}>
+                  <Mail /> Enviar por e-mail
+                </Link>
+              </Button>
+              <Button asChild variant="ghost">
                 <a href={url} target="_blank" rel="noreferrer">
                   <ExternalLink /> Ver galeria
                 </a>

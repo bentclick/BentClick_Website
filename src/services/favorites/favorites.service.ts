@@ -1,8 +1,10 @@
 import "server-only";
+import { after } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { logActivity } from "@/services/activity/activity.repository";
+import { notifySelectionSubmitted } from "@/services/email/email.service";
 import { DomainError, NotFoundError } from "@/services/errors";
 import { openClientSession, type ResolvedGallery, resolveGallery } from "@/services/public-gallery/public-gallery.service";
 import type { PublicPhoto } from "@/types/public-gallery";
@@ -94,5 +96,6 @@ export async function submitSelection(slug: string, identity: { clientName: stri
     type: "SELECTION_SUBMITTED",
     metadata: { count, clientName: identity.clientName },
   });
+  after(() => notifySelectionSubmitted(resolved.collection.id, identity.clientName, identity.clientEmail, count));
   return { count };
 }
