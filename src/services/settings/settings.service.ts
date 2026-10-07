@@ -7,7 +7,7 @@ import { getStorageUsage } from "@/services/storage/storage.service";
 
 export async function getSettings(userId: string, fallbackName: string) {
   const [user, profile, storage, watermarks] = await Promise.all([
-    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, email: true } }),
+    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, email: true, twoFactorEnabled: true } }),
     getPhotographerProfile(userId, fallbackName),
     getStorageUsage(userId),
     prisma.watermark.findMany({ where: { userId }, orderBy: { name: "asc" }, select: { id: true, name: true } }),

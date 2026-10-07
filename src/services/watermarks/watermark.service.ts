@@ -51,7 +51,11 @@ async function storeLogo(userId: string, watermarkId: string, version: number, f
   if (file.size > LOGO_MAX_BYTES) throw new DomainError("LOGO_SIZE", "O logo deve ter até 2 MB.");
   let png: Buffer;
   try {
-    png = await sharp(Buffer.from(await file.arrayBuffer()), { failOn: "error" }).ensureAlpha().resize({ width: 1600, withoutEnlargement: true }).png().toBuffer();
+    const input = sharp(Buffer.from(await file.arrayBuffer()), { failOn: "error", limitInputPixels: 25_000_000 });
+    // The real format, not the declared MIME type: only PNG/WebP are decoded.
+    const { format } = await input.metadata();
+    if (format !== "png" && format !== "webp") throw new Error("format");
+    png = await input.ensureAlpha().resize({ width: 1600, withoutEnlargement: true }).png().toBuffer();
   } catch {
     throw new DomainError("LOGO_INVALID", "Não foi possível ler a imagem do logo.");
   }

@@ -6,13 +6,19 @@ import { toggleFavoriteAction } from "@/actions/public-gallery.actions";
 import type { PublicPhoto } from "@/types/public-gallery";
 
 /** Optimistic hearts: flip immediately, reconcile with the server, roll back on failure. */
-export function useFavorites(slug: string, initialIds: string[]) {
+export function useFavorites(slug: string, initialIds: string[], initiallyClosed: boolean) {
   const [ids, setIds] = useState(() => new Set(initialIds));
+  // Once the selection is sent it is closed; only the photographer can reopen it.
+  const [closed, setClosed] = useState(initiallyClosed);
   const [list, setList] = useState<PublicPhoto[] | null>(null);
   const [loadingList, setLoadingList] = useState(false);
 
   const toggle = useCallback(
     async (photo: PublicPhoto) => {
+      if (closed) {
+        toast("Sua seleção já foi enviada", { description: "Para mudar, peça ao fotógrafo para reabri-la." });
+        return;
+      }
       const wasFavorite = ids.has(photo.id);
       const flip = (on: boolean) =>
         setIds((prev) => {
@@ -35,7 +41,7 @@ export function useFavorites(slug: string, initialIds: string[]) {
         toast("Adicionada aos favoritos", { description: "Quando terminar, envie sua seleção em Favoritos." });
       }
     },
-    [ids, slug],
+    [closed, ids, slug],
   );
 
   const loadList = useCallback(async () => {
@@ -51,5 +57,7 @@ export function useFavorites(slug: string, initialIds: string[]) {
     }
   }, [slug]);
 
-  return { ids, count: ids.size, toggle, list, loadList, loadingList };
+  const close = useCallback(() => setClosed(true), []);
+
+  return { ids, count: ids.size, toggle, list, loadList, loadingList, closed, close };
 }

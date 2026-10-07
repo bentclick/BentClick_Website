@@ -15,7 +15,7 @@ export function originalSatisfies(variant: DownloadVariant, mimeType: string, wi
 /** sRGB JPEG with orientation applied; metadata (GPS etc.) stripped. */
 export function renderDownloadVariant(original: Buffer, variant: DownloadVariant): Promise<Buffer> {
   const edge = VARIANT_EDGE[variant];
-  return sharp(original, { failOn: "error" })
+  return sharp(original, { failOn: "error", limitInputPixels: 200_000_000 })
     .rotate()
     .resize(edge, edge, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: VARIANT_QUALITY[variant], mozjpeg: true })

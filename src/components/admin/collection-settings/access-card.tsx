@@ -4,6 +4,7 @@ import { useState } from "react";
 import { setPasswordAction, updateAccessAction } from "@/actions/collection-settings.actions";
 import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label } from "@/components/ui/field";
+import { galleryPasswordSchema, suggestGalleryPassword } from "@/lib/validation/gallery-password";
 import { SwitchField } from "@/components/ui/switch-field";
 import type { CollectionSettingsView } from "@/types/collection-settings";
 import { SettingsCard, useSave } from "./settings-card";
@@ -34,7 +35,7 @@ export function AccessCard({ collection }: { collection: CollectionSettingsView 
         <SwitchField
           id="set-identity"
           label="Pedir nome e e-mail do cliente"
-          description="Antes de enviar a seleção de favoritos."
+          description="Antes de favoritar ou baixar fotos."
           checked={access.requireClientIdentity}
           onChange={(e) => setAccess((a) => ({ ...a, requireClientIdentity: e.target.checked }))}
         />
@@ -60,16 +61,27 @@ export function AccessCard({ collection }: { collection: CollectionSettingsView 
             aria-invalid={!!passwordError}
           />
           <Button
+            variant="ghost"
+            onClick={() => {
+              setPassword(suggestGalleryPassword());
+              setPasswordError(undefined);
+            }}
+          >
+            Gerar senha
+          </Button>
+          <Button
             variant="outline"
             disabled={passwordSave.pending || password.trim().length === 0}
-            onClick={() =>
+            onClick={() => {
+              const check = galleryPasswordSchema.safeParse(password);
+              if (!check.success) return setPasswordError(check.error.issues[0]?.message);
               passwordSave.save(
                 () => setPasswordAction({ collectionId: collection.id, password }),
                 collection.hasPassword ? "Senha alterada" : "Senha definida",
                 () => setPassword(""),
                 (e) => setPasswordError(e.password?.[0]),
-              )
-            }
+              );
+            }}
           >
             {collection.hasPassword ? "Alterar senha" : "Definir senha"}
           </Button>
@@ -85,7 +97,10 @@ export function AccessCard({ collection }: { collection: CollectionSettingsView 
           ) : null}
         </div>
         <FieldError message={passwordError} />
-        <FieldHint>Ao trocar a senha, todos precisam digitar a nova — os favoritos dos clientes são mantidos.</FieldHint>
+        <FieldHint>
+          Mínimo de 8 caracteres, com número e caractere especial. Após 20 tentativas erradas em 1 hora, a galeria bloqueia novas tentativas por até 1
+          hora. Ao trocar a senha, todos precisam digitar a nova — os favoritos dos clientes são mantidos.
+        </FieldHint>
       </div>
     </SettingsCard>
   );

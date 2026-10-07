@@ -40,8 +40,15 @@ export function listSessionFavoritePhotos(db: Db, clientSessionId: string) {
   });
 }
 
-export function updateSessionIdentity(db: Db, clientSessionId: string, data: { clientName: string; clientEmail: string }) {
-  return db.clientSession.update({ where: { id: clientSessionId }, data: { ...data, selectionSubmittedAt: new Date() } });
+/** Submits (closes) the selection; false when it was already submitted — atomic, so a double click sends one e-mail. */
+export async function submitSessionSelection(db: Db, clientSessionId: string, data: { clientName: string; clientEmail: string }) {
+  const { count } = await db.clientSession.updateMany({ where: { id: clientSessionId, selectionSubmittedAt: null }, data: { ...data, selectionSubmittedAt: new Date() } });
+  return count === 1;
+}
+
+/** Photographer reopens a submitted selection so the client can change it. */
+export function reopenSessionSelection(db: Db, clientSessionId: string) {
+  return db.clientSession.update({ where: { id: clientSessionId }, data: { selectionSubmittedAt: null }, select: { id: true } });
 }
 
 /** Photographer view: every session in a collection that has favourited something. */
@@ -64,7 +71,7 @@ export function listCollectionSelections(db: Db, collectionId: string) {
 export function findOwnedClientSession(db: Db, userId: string, clientSessionId: string) {
   return db.clientSession.findFirst({
     where: { id: clientSessionId, collection: { userId } },
-    select: { id: true, collectionId: true, clientName: true, clientEmail: true },
+    select: { id: true, collectionId: true, clientName: true, clientEmail: true, selectionSubmittedAt: true },
   });
 }
 

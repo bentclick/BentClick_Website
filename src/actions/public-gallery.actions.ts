@@ -4,7 +4,7 @@ import { z } from "zod";
 import { type ActionResult, ok, toActionError } from "@/lib/actions/result";
 import { idSchema } from "@/lib/validation/common";
 import { submitSelection, toggleFavorite } from "@/services/favorites/favorites.service";
-import { unlockWithPassword } from "@/services/public-gallery/public-gallery.service";
+import { identifyVisitor, unlockWithPassword } from "@/services/public-gallery/public-gallery.service";
 
 const slugSchema = z.string().regex(/^[0-9A-Za-z]{12}$/);
 
@@ -28,11 +28,22 @@ export async function toggleFavoriteAction(slug: unknown, photoId: unknown): Pro
   }
 }
 
-const selectionSchema = z.object({
+const identitySchema = z.object({
   slug: slugSchema,
   clientName: z.string().trim().min(1, "Informe seu nome").max(120),
   clientEmail: z.email("Informe um e-mail válido").max(254),
 });
+const selectionSchema = identitySchema;
+
+export async function identifyVisitorAction(input: unknown): Promise<ActionResult> {
+  try {
+    const { slug, ...identity } = identitySchema.parse(input);
+    await identifyVisitor(slug, identity);
+    return ok(undefined);
+  } catch (error) {
+    return toActionError(error);
+  }
+}
 
 export async function submitSelectionAction(input: unknown): Promise<ActionResult<{ count: number }>> {
   try {

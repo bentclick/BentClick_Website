@@ -135,11 +135,14 @@ model User {
   email         String   @unique
   emailVerified Boolean  @default(false)
   image         String?
+  // Better Auth twoFactor plugin: true only after the first TOTP code is verified.
+  twoFactorEnabled Boolean @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   sessions        Session[]
   accounts        Account[]
+  twoFactors      TwoFactor[]
   profile         PhotographerProfile?
   clients         Client[]
   collections     Collection[]
@@ -198,6 +201,32 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+/// Better Auth twoFactor plugin. Secret and backup codes are encrypted with BETTER_AUTH_SECRET.
+model TwoFactor {
+  id                      String    @id
+  secret                  String
+  backupCodes             String
+  userId                  String
+  verified                Boolean   @default(true)
+  failedVerificationCount Int       @default(0)
+  lockedUntil             DateTime?
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([secret])
+  @@index([userId])
+  @@map("two_factor")
+}
+
+/// Better Auth rate limiter (storage: "database"), shared across serverless instances.
+model AuthRateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("auth_rate_limit")
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -22,6 +22,8 @@ export type PublicGalleryView = {
   coverColor: string | null;
   studio: { name: string; accent: string };
   features: { favorites: boolean; download: boolean; fullDownload: boolean; share: boolean; requireIdentity: boolean };
+  /** Who this visitor said they are, and whether they already sent their selection. */
+  visitor: { name: string | null; email: string | null; selectionClosed: boolean };
   galleries: { id: string; name: string; count: number }[];
   firstPage: PhotoPage;
 };

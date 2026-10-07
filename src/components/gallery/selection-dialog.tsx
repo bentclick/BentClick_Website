@@ -8,12 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FieldError, Input, Label } from "@/components/ui/field";
 
-type Props = { open: boolean; onOpenChange: (open: boolean) => void; slug: string; count: number };
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  slug: string;
+  count: number;
+  initialName?: string | null;
+  initialEmail?: string | null;
+  onSubmitted: () => void;
+};
 
 /** Hands the client's hearts to the photographer, with who chose them. */
-export function SelectionDialog({ open, onOpenChange, slug, count }: Props) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+export function SelectionDialog({ open, onOpenChange, slug, count, initialName, initialEmail, onSubmitted }: Props) {
+  const [name, setName] = useState(initialName ?? "");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [pending, startTransition] = useTransition();
 
@@ -30,6 +38,7 @@ export function SelectionDialog({ open, onOpenChange, slug, count }: Props) {
         return;
       }
       toast.success("Seleção enviada", { description: `${result.data.count} fotos enviadas ao fotógrafo.` });
+      onSubmitted();
       onOpenChange(false);
     });
   }
@@ -39,7 +48,7 @@ export function SelectionDialog({ open, onOpenChange, slug, count }: Props) {
       <DialogContent>
         <DialogTitle>Enviar seleção</DialogTitle>
         <DialogDescription>
-          {count === 1 ? "Você marcou 1 foto." : `Você marcou ${count} fotos.`} O fotógrafo recebe a lista com o seu nome. Você pode continuar ajustando depois.
+          {count === 1 ? "Você marcou 1 foto." : `Você marcou ${count} fotos.`} O fotógrafo recebe a lista com o seu nome. Depois de enviada, a seleção fica fechada — para mudar, fale com o fotógrafo.
         </DialogDescription>
         <form onSubmit={submit} noValidate className="mt-6 grid gap-4">
           <div className="grid gap-2">

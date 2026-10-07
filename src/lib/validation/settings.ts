@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DownloadQuality, GalleryLayout } from "@/generated/prisma/enums";
 
-const optionalUrl = z.union([z.url("Informe um endereço completo (https://…)").max(200), z.literal("")]);
+const optionalUrl = z.union([z.url({ protocol: /^https?$/, message: "Informe um endereço completo (https://…)" }).max(200), z.literal("")]);
 const optionalEmail = z.union([z.email("Informe um e-mail válido").max(254), z.literal("")]);
 
 export const profileSchema = z.object({

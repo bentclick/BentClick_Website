@@ -27,9 +27,10 @@ export function listReadyPhotosForArchive(db: Db, collectionId: string, filter: 
   });
 }
 
-export function findReusableJob(db: Db, collectionId: string, fingerprint: string, minExpiry: Date) {
+/** Same photos and quality, and — for favourites — the same visitor session (another visitor could not open it). */
+export function findReusableJob(db: Db, collectionId: string, fingerprint: string, minExpiry: Date, clientSessionId: string | null) {
   return db.downloadJob.findFirst({
-    where: { collectionId, fingerprint, status: { in: ["QUEUED", "PROCESSING", "READY"] }, expiresAt: { gt: minExpiry } },
+    where: { collectionId, fingerprint, clientSessionId, status: { in: ["QUEUED", "PROCESSING", "READY"] }, expiresAt: { gt: minExpiry } },
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });

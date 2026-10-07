@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, Eye, Heart, Send } from "lucide-react";
+import { ArrowLeft, Check, Download, Eye, Heart, Send } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArchiveDialog } from "@/components/downloads/archive-dialog";
@@ -10,6 +10,7 @@ import type { PublicGalleryView, PublicPhoto } from "@/types/public-gallery";
 import { FavoriteButton } from "./favorite-button";
 import { GalleryCover } from "./gallery-cover";
 import { GalleryHeader, HeaderAction } from "./gallery-header";
+import { IdentityDialog } from "./identity-dialog";
 import { Lightbox } from "./lightbox";
 import { LoadMoreSentinel, PhotoLayout } from "./photo-layout";
 import { SelectionDialog } from "./selection-dialog";
@@ -41,8 +42,17 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const { pages, ensure, loadMore } = usePhotoPages(view.slug, view.preview, firstId, view.firstPage);
-  const fav = useFavorites(view.slug, favoriteIds);
+  const fav = useFavorites(view.slug, favoriteIds, view.visitor.selectionClosed);
   const main = useRef<HTMLElement>(null);
+  const [identity, setIdentity] = useState({ name: view.visitor.name, email: view.visitor.email });
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  /** Galleries that ask for name and e-mail: run the action now, or after the visitor identifies. */
+  const needsIdentity = view.features.requireIdentity && !view.preview && !identity.email;
+  function withIdentity(action: () => void) {
+    if (needsIdentity) setPendingAction(() => action);
+    else action();
+  }
 
   // Hearts are for the client; the photographer's preview never creates sessions.
   const canFavorite = view.features.favorites && !view.preview;
@@ -76,7 +86,7 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
   }
 
   const heart = (photo: PublicPhoto) =>
-    canFavorite ? <FavoriteButton active={fav.ids.has(photo.id)} filename={photo.filename} onToggle={() => void fav.toggle(photo)} /> : null;
+    canFavorite ? <FavoriteButton active={fav.ids.has(photo.id)} filename={photo.filename} onToggle={() => withIdentity(() => void fav.toggle(photo))} /> : null;
 
   return (
     <>
@@ -107,7 +117,7 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
           onSlideshow={() => photos.length && setLightbox({ index: 0, playing: true })}
         >
           {canFavorite ? <HeaderAction icon={Heart} label="Favoritos" onClick={() => openFavorites(!showingFavorites)} active={showingFavorites} badge={fav.count} /> : null}
-          {canZip ? <HeaderAction icon={Download} label="Baixar" onClick={() => setArchiveOpen(true)} /> : null}
+          {canZip ? <HeaderAction icon={Download} label="Baixar" onClick={() => withIdentity(() => setArchiveOpen(true))} /> : null}
         </GalleryHeader>
 
         <div className="mx-auto max-w-[1800px] px-1.5 pb-24 sm:px-8">
@@ -119,12 +129,22 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
               <div>
                 <h2 className="font-serif text-3xl">Seus favoritos</h2>
                 <p className="mt-1 text-[12.5px] text-muted-foreground">
-                  {fav.count === 0 ? "Toque no coração das fotos que você mais gostou." : `${fav.count} ${fav.count === 1 ? "foto marcada" : "fotos marcadas"}`}
+                  {fav.closed
+                    ? "Seleção enviada ao fotógrafo. Para mudar, peça a ele para reabri-la."
+                    : fav.count === 0
+                      ? "Toque no coração das fotos que você mais gostou."
+                      : `${fav.count} ${fav.count === 1 ? "foto marcada" : "fotos marcadas"}`}
                 </p>
               </div>
-              <Button onClick={() => setSelectionOpen(true)} disabled={fav.count === 0}>
-                <Send /> Enviar seleção
-              </Button>
+              {fav.closed ? (
+                <Button variant="outline" disabled>
+                  <Check /> Seleção enviada
+                </Button>
+              ) : (
+                <Button onClick={() => setSelectionOpen(true)} disabled={fav.count === 0}>
+                  <Send /> Enviar seleção
+                </Button>
+              )}
             </div>
           ) : view.galleries.length > 1 ? (
             <nav aria-label="Galerias" className="-mx-1.5 overflow-x-auto px-4 sm:mx-0 sm:px-0">
@@ -194,12 +214,18 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
           onTogglePlay={() => setLightbox((l) => (l ? { ...l, playing: !l.playing } : l))}
           onNeedMore={more}
           onShare={view.features.share ? share : undefined}
-          onShortcut={(key, photo) => key === "f" && canFavorite && void fav.toggle(photo)}
+          onShortcut={(key, photo) => key === "f" && canFavorite && withIdentity(() => void fav.toggle(photo))}
           actions={(photo) => (
             <>
               {view.features.download || view.preview ? (
                 <a
                   href={`/g/${view.slug}/api/photos/${photo.id}/download${view.preview ? "?preview=1" : ""}`}
+                  onClick={(e) => {
+                    if (!needsIdentity) return;
+                    e.preventDefault();
+                    const href = e.currentTarget.href;
+                    withIdentity(() => window.location.assign(href));
+                  }}
                   aria-label="Baixar esta foto"
                   title="Baixar esta foto"
                   className="grid size-11 place-items-center rounded-[4px] text-white/75 transition-colors hover:text-white active:scale-90"
@@ -210,7 +236,7 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
               {canFavorite ? (
               <button
                 type="button"
-                onClick={() => void fav.toggle(photo)}
+                onClick={() => withIdentity(() => void fav.toggle(photo))}
                 aria-pressed={fav.ids.has(photo.id)}
                 aria-label={fav.ids.has(photo.id) ? "Remover dos favoritos (F)" : "Favoritar (F)"}
                 title="Favoritar (F)"
@@ -224,7 +250,32 @@ export function ClientGallery({ view, favoriteIds, initialMode = "gallery" }: Pr
         />
       ) : null}
 
-      {canFavorite ? <SelectionDialog open={selectionOpen} onOpenChange={setSelectionOpen} slug={view.slug} count={fav.count} /> : null}
+      {canFavorite ? (
+        <SelectionDialog
+          open={selectionOpen}
+          onOpenChange={setSelectionOpen}
+          slug={view.slug}
+          count={fav.count}
+          initialName={identity.name}
+          initialEmail={identity.email}
+          onSubmitted={fav.close}
+        />
+      ) : null}
+
+      {view.features.requireIdentity && !view.preview ? (
+        <IdentityDialog
+          open={pendingAction !== null}
+          onOpenChange={(open) => !open && setPendingAction(null)}
+          slug={view.slug}
+          studio={view.studio.name}
+          onIdentified={(id) => {
+            setIdentity(id);
+            const run = pendingAction;
+            setPendingAction(null);
+            run?.();
+          }}
+        />
+      ) : null}
 
       {canZip ? (
         <ArchiveDialog

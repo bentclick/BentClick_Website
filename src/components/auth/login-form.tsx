@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
 import { authClient } from "@/lib/auth/auth-client";
 import { type SignUpInput, signInFormSchema, signUpSchema } from "@/lib/validation/auth";
+import { TwoFactorStep } from "./two-factor-step";
 
 type Mode = "sign-in" | "sign-up";
 
@@ -16,6 +18,7 @@ export function LoginForm({ nextPath, allowSignup }: { nextPath: string; allowSi
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("sign-in");
   const [serverError, setServerError] = useState<string | null>(null);
+  const [twoFactor, setTwoFactor] = useState(false);
 
   const form = useForm<SignUpInput>({
     // Both schemas share one shape; sign-in simply doesn't validate the name.
@@ -41,9 +44,16 @@ export function LoginForm({ nextPath, allowSignup }: { nextPath: string; allowSi
       );
       return;
     }
+    if (result.data && "twoFactorRedirect" in result.data && result.data.twoFactorRedirect) return setTwoFactor(true);
+    enter();
+  });
+
+  function enter() {
     router.replace(nextPath);
     router.refresh();
-  });
+  }
+
+  if (twoFactor) return <TwoFactorStep onVerified={enter} onCancel={() => setTwoFactor(false)} />;
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid gap-5">
@@ -71,6 +81,11 @@ export function LoginForm({ nextPath, allowSignup }: { nextPath: string; allowSi
           {...form.register("password")}
         />
         <FieldError message={errors.password?.message} />
+        {mode === "sign-in" ? (
+          <Link href="/esqueci-senha" className="justify-self-end text-[12.5px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+            Esqueci minha senha
+          </Link>
+        ) : null}
       </div>
 
       {serverError ? (

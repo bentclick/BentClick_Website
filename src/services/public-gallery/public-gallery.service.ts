@@ -5,8 +5,9 @@ import { prisma } from "@/lib/db/prisma";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
 import { CLIENT_SESSION_DAYS, readGalleryToken, writeGalleryToken } from "@/lib/security/gallery-cookie";
 import { verifyGalleryPassword } from "@/lib/security/password";
-import { consumeRateLimit } from "@/lib/security/rate-limit";
-import { generateSessionToken, hmac, sha256 } from "@/lib/security/tokens";
+import { clientIpHash } from "@/lib/security/client-ip";
+import { consumeRateLimit, enforceRateLimit, isRateLimited } from "@/lib/security/rate-limit";
+import { generateSessionToken, sha256 } from "@/lib/security/tokens";
 import { DomainError, NotFoundError } from "@/services/errors";
 import type { PhotoPage, PublicGalleryView } from "@/types/public-gallery";
 import { type AccessDecision, decideAccess } from "./access-rules";
@@ -17,6 +18,7 @@ import {
   listReadyPhotos,
   listVisibleGalleries,
   markCollectionExpired,
+  setSessionIdentity,
   type PublicCollectionRow,
 } from "./public-gallery.repository";
 
@@ -54,6 +56,25 @@ export async function resolveGallery(slug: string, opts: { preview?: boolean } =
     await markCollectionExpired(prisma, collection.id).catch(() => undefined);
   }
   return { collection, decision, session };
+}
+
+/** The visitor's session when it is valid for this gallery (never in owner preview). */
+export function validSession(resolved: ResolvedGallery) {
+  return resolved.decision.kind === "GRANTED" && resolved.decision.sessionValid && !resolved.decision.preview ? resolved.session : null;
+}
+
+/** Galleries set to ask for name and e-mail refuse hearts and downloads until the visitor gave them. */
+export function assertVisitorIdentified(resolved: ResolvedGallery) {
+  if (!resolved.collection.requireClientIdentity) return;
+  if (resolved.decision.kind === "GRANTED" && resolved.decision.preview) return;
+  if (!validSession(resolved)?.clientEmail) throw new DomainError("IDENTITY_REQUIRED", "Informe seu nome e e-mail para continuar.");
+}
+
+export async function identifyVisitor(slug: string, identity: { clientName: string; clientEmail: string }) {
+  const resolved = await resolveGallery(slug);
+  if (!resolved || resolved.decision.kind !== "GRANTED" || resolved.decision.preview) throw new NotFoundError("Gallery");
+  const sessionId = validSession(resolved)?.id ?? (await openClientSession(resolved.collection, false)).id;
+  await setSessionIdentity(prisma, sessionId, identity);
 }
 
 export async function photoPage(collectionId: string, galleryId: string, cursor?: string): Promise<PhotoPage> {
@@ -96,6 +117,10 @@ export async function buildGalleryView(resolved: ResolvedGallery): Promise<Publi
       share: collection.allowSharing,
       requireIdentity: collection.requireClientIdentity,
     },
+    visitor: (() => {
+      const session = validSession(resolved);
+      return { name: session?.clientName ?? null, email: session?.clientEmail ?? null, selectionClosed: Boolean(session?.selectionSubmittedAt) };
+    })(),
     galleries: galleries.map((g) => ({ id: g.id, name: g.name, count: g._count.photos })),
     firstPage: first ? await photoPage(collection.id, first.id) : { photos: [], nextCursor: null },
   };
@@ -103,17 +128,22 @@ export async function buildGalleryView(resolved: ResolvedGallery): Promise<Publi
 
 async function requestMeta() {
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? "unknown";
-  return { ipHash: hmac(ip, process.env.GALLERY_TOKEN_SECRET ?? "dev"), userAgent: h.get("user-agent")?.slice(0, 300) ?? undefined };
+  return { ipHash: await clientIpHash(), userAgent: h.get("user-agent")?.slice(0, 300) ?? undefined };
 }
+
+/** New visitor sessions per IP (all galleries) and per gallery: clearing the cookie must not reset the other limits. */
+const SESSIONS_PER_IP_PER_HOUR = 30;
+const SESSIONS_PER_GALLERY_PER_HOUR = 500;
 
 /**
  * Starts a client session (or upgrades it after a password) and sets the
  * path-scoped cookie. Server Actions / Route Handlers only.
  */
 export async function openClientSession(collection: PublicCollectionRow, passwordOk: boolean) {
-  const token = generateSessionToken();
   const meta = await requestMeta();
+  await enforceRateLimit(`gallery-session:ip:${meta.ipHash}`, SESSIONS_PER_IP_PER_HOUR, 3600);
+  await enforceRateLimit(`gallery-session:${collection.id}`, SESSIONS_PER_GALLERY_PER_HOUR, 3600);
+  const token = generateSessionToken();
   const session = await createClientSession(prisma, {
     collectionId: collection.id,
     tokenHash: sha256(token),
@@ -126,18 +156,29 @@ export async function openClientSession(collection: PublicCollectionRow, passwor
   return session;
 }
 
-/** 5 attempts per 15 minutes per visitor and gallery. */
+/** Guesses per visitor IP, and wrong guesses per gallery from everyone (an attacker can rotate IPs, not galleries). */
+const PASSWORD_TRIES_PER_IP = 5;
+const PASSWORD_IP_WINDOW = 15 * 60;
+const WRONG_PASSWORDS_PER_GALLERY = 20;
+const GALLERY_LOCK_WINDOW = 60 * 60;
+
 export async function unlockWithPassword(slug: string, password: string) {
   const resolved = await resolveGallery(slug);
-  if (!resolved || resolved.decision.kind === "NOT_FOUND") throw new NotFoundError("Gallery");
+  // Expired galleries answer like unknown ones: no password oracle once access has ended.
+  if (!resolved || (resolved.decision.kind !== "NEEDS_PASSWORD" && resolved.decision.kind !== "GRANTED")) throw new NotFoundError("Gallery");
   const { collection } = resolved;
   if (!collection.passwordHash) return;
 
   const { ipHash } = await requestMeta();
-  if (!(await consumeRateLimit(`gallery-pw:${collection.id}:${ipHash}`, 5, 15 * 60))) {
+  const lockKey = `gallery-pw-fail:${collection.id}`;
+  if (await isRateLimited(lockKey, WRONG_PASSWORDS_PER_GALLERY)) {
+    throw new DomainError("GALLERY_LOCKED", "Muitas tentativas erradas nesta galeria. Por segurança, ela fica bloqueada por até 1 hora. Se você é o cliente, fale com o fotógrafo.");
+  }
+  if (!(await consumeRateLimit(`gallery-pw:${collection.id}:${ipHash}`, PASSWORD_TRIES_PER_IP, PASSWORD_IP_WINDOW))) {
     throw new DomainError("RATE_LIMITED", "Muitas tentativas. Aguarde alguns minutos e tente de novo.");
   }
   if (!(await verifyGalleryPassword(collection.passwordHash, password))) {
+    await consumeRateLimit(lockKey, WRONG_PASSWORDS_PER_GALLERY, GALLERY_LOCK_WINDOW);
     throw new DomainError("WRONG_PASSWORD", "Senha incorreta.");
   }
   // Upgrade the visitor's existing session so favourites made before a password change survive.

@@ -15,7 +15,7 @@ export default async function ContactPage() {
     profile?.email ? { icon: Mail, label: "E-mail", value: profile.email, href: `mailto:${profile.email}` } : null,
     whatsapp ? { icon: MessageCircle, label: "WhatsApp", value: contact.whatsapp, href: `https://wa.me/${whatsapp}` } : null,
     instagram ? { icon: AtSign, label: "Instagram", value: `@${instagram}`, href: `https://instagram.com/${instagram}` } : null,
-    profile?.websiteUrl ? { icon: Globe, label: "Site", value: profile.websiteUrl.replace(/^https?:\/\//, ""), href: profile.websiteUrl } : null,
+    profile?.websiteUrl && /^https?:\/\//i.test(profile.websiteUrl) ? { icon: Globe, label: "Site", value: profile.websiteUrl.replace(/^https?:\/\//, ""), href: profile.websiteUrl } : null,
   ].filter((c) => c !== null);
 
   return (

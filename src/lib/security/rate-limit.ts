@@ -17,6 +17,13 @@ export async function consumeRateLimit(key: string, limit: number, windowSeconds
   return (rows[0]?.count ?? 0) <= limit;
 }
 
+/** Read-only check: has this key already used up its window? (Pair with consumeRateLimit on failure.) */
+export async function isRateLimited(key: string, limit: number): Promise<boolean> {
+  const rows = await prisma.$queryRaw<{ count: number }[]>`
+    SELECT "count" FROM "rate_limit_bucket" WHERE "key" = ${key} AND "resetAt" >= now()`;
+  return (rows[0]?.count ?? 0) >= limit;
+}
+
 export async function enforceRateLimit(key: string, limit: number, windowSeconds: number) {
   if (!(await consumeRateLimit(key, limit, windowSeconds))) {
     throw new DomainError("RATE_LIMITED", "Muitas requisições em sequência. Aguarde um instante e tente de novo.");

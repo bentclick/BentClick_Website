@@ -1,21 +1,18 @@
 import "server-only";
-import { headers } from "next/headers";
 import { prisma } from "@/lib/db/prisma";
 import { signDownloadUrl } from "@/lib/r2/signed-urls";
+import { clientIpHash } from "@/lib/security/client-ip";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { hmac } from "@/lib/security/tokens";
 import { logActivity } from "@/services/activity/activity.repository";
 import { DomainError, NotFoundError } from "@/services/errors";
-import { type ResolvedGallery, resolveGallery } from "@/services/public-gallery/public-gallery.service";
+import { assertVisitorIdentified, type ResolvedGallery, resolveGallery } from "@/services/public-gallery/public-gallery.service";
 import { logDownload } from "./archive.repository";
 import { type ArchiveStatus, loadJob, needsWork, requestArchive, signArchivePart, toArchiveStatus } from "./archive.service";
 import { resolveDeliveryObject } from "./delivery.service";
 
 async function visitorKey(resolved: ResolvedGallery) {
   if (resolved.decision.kind === "GRANTED" && resolved.decision.sessionValid && resolved.session) return { sessionId: resolved.session.id, key: resolved.session.id };
-  const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  return { sessionId: undefined, key: hmac(ip, process.env.GALLERY_TOKEN_SECRET ?? "dev") };
+  return { sessionId: undefined, key: await clientIpHash() };
 }
 
 async function granted(slug: string, preview: boolean) {
@@ -29,6 +26,7 @@ export async function visitorPhotoDownloadUrl(slug: string, photoId: string, pre
   const { resolved, isPreview } = await granted(slug, preview);
   const { collection } = resolved;
   if (!collection.allowIndividualDownload && !isPreview) throw new DomainError("DOWNLOAD_DISABLED", "O download está desativado nesta galeria.");
+  assertVisitorIdentified(resolved);
 
   const photo = await prisma.photo.findFirst({
     where: { id: photoId, collectionId: collection.id, status: "READY" },
@@ -51,10 +49,14 @@ export async function requestVisitorArchive(slug: string, scope: "all" | "favori
   const { resolved } = await granted(slug, false);
   const { collection } = resolved;
   if (!collection.allowFullDownload) throw new DomainError("DOWNLOAD_DISABLED", "O download da galeria completa está desativado.");
+  assertVisitorIdentified(resolved);
 
   const visitor = await visitorKey(resolved);
   if (scope === "favorites" && !visitor.sessionId) throw new DomainError("NO_SELECTION", "Marque fotos com o coração para baixar suas favoritas.");
   await enforceRateLimit(`zip:${collection.id}:${visitor.key}`, 6, 3600);
+  // Per IP too (a new cookie is a new session), and a ceiling on distinct favourites ZIPs per gallery.
+  await enforceRateLimit(`zip-ip:${collection.id}:${await clientIpHash()}`, 10, 3600);
+  if (scope === "favorites") await enforceRateLimit(`zip-fav:${collection.id}`, 30, 3600);
 
   return requestArchive({
     collectionId: collection.id,
@@ -64,11 +66,17 @@ export async function requestVisitorArchive(slug: string, scope: "all" | "favori
   });
 }
 
-/** A visitor may read an archive of the whole gallery, or favourites archives from their own session. */
+/**
+ * A visitor may read an archive of the whole gallery, or favourites archives from their own session —
+ * and only while the gallery still allows it at that quality (settings may have changed since the ZIP was built).
+ */
 async function visitorJob(slug: string, jobId: string) {
   const { resolved } = await granted(slug, false);
+  const { collection } = resolved;
   const job = await loadJob(jobId);
-  if (!job || job.collectionId !== resolved.collection.id) throw new NotFoundError("Archive");
+  if (!job || job.collectionId !== collection.id) throw new NotFoundError("Archive");
+  const stillAllowed = collection.allowFullDownload && job.quality === collection.downloadQuality && (job.type !== "FAVORITES" || collection.allowFavorites);
+  if (!stillAllowed) throw new DomainError("DOWNLOAD_DISABLED", "Este download não está mais disponível. Fale com o fotógrafo.");
   if (job.type === "FAVORITES") {
     const visitor = await visitorKey(resolved);
     if (!visitor.sessionId || visitor.sessionId !== job.clientSessionId) throw new NotFoundError("Archive");

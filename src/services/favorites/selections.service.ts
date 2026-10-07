@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db/prisma";
 import { NotFoundError } from "@/services/errors";
 import { findOwnedCollection } from "@/services/collections/collection.repository";
-import { clearSessionFavorites, findOwnedClientSession, listCollectionSelections, listSessionFavoritePhotos } from "./favorite.repository";
+import { clearSessionFavorites, findOwnedClientSession, reopenSessionSelection, listCollectionSelections, listSessionFavoritePhotos } from "./favorite.repository";
 import { sessionFavoritePhotos } from "./favorites.service";
 
 export type SelectionSummary = {
@@ -46,6 +46,14 @@ export async function exportSelectionFilenames(userId: string, clientSessionId: 
 export async function clearSelection(userId: string, clientSessionId: string) {
   const session = await findOwnedClientSession(prisma, userId, clientSessionId);
   if (!session) throw new NotFoundError("Selection");
-  await clearSessionFavorites(prisma, session.id);
+  // An emptied selection is open again, so the client can choose anew.
+  await prisma.$transaction([clearSessionFavorites(prisma, session.id), reopenSessionSelection(prisma, session.id)]);
+  return { collectionId: session.collectionId };
+}
+
+export async function reopenSelection(userId: string, clientSessionId: string) {
+  const session = await findOwnedClientSession(prisma, userId, clientSessionId);
+  if (!session) throw new NotFoundError("Selection");
+  await reopenSessionSelection(prisma, session.id);
   return { collectionId: session.collectionId };
 }

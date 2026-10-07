@@ -1,17 +1,17 @@
 "use client";
 
-import { ClipboardCopy, Download, FileDown, Loader2, Trash2 } from "lucide-react";
+import { ClipboardCopy, Download, FileDown, Loader2, LockOpen, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { clearSelectionAction } from "@/actions/selection.actions";
+import { clearSelectionAction, reopenSelectionAction } from "@/actions/selection.actions";
 import { ArchiveDialog } from "@/components/downloads/archive-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
-type Props = { sessionId: string; collectionId: string; count: number; clientLabel: string; backHref: string };
+type Props = { sessionId: string; collectionId: string; count: number; clientLabel: string; backHref: string; submitted: boolean };
 
-export function SelectionActions({ sessionId, collectionId, count, clientLabel, backHref }: Props) {
+export function SelectionActions({ sessionId, collectionId, count, clientLabel, backHref, submitted }: Props) {
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [zipOpen, setZipOpen] = useState(false);
@@ -44,6 +44,24 @@ export function SelectionActions({ sessionId, collectionId, count, clientLabel, 
           <FileDown /> Exportar nomes (.txt)
         </a>
       </Button>
+      {submitted ? (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={pending}
+          title="A seleção enviada fica fechada. Reabra para o cliente poder mudar."
+          onClick={() =>
+            startTransition(async () => {
+              const r = await reopenSelectionAction(sessionId);
+              if (!r.ok) return void toast.error(r.error);
+              toast.success("Seleção reaberta", { description: `${clientLabel} já pode mudar as fotos e enviar de novo.` });
+              router.refresh();
+            })
+          }
+        >
+          <LockOpen /> Reabrir seleção
+        </Button>
+      ) : null}
       <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => setConfirm(true)}>
         <Trash2 /> Limpar seleção
       </Button>

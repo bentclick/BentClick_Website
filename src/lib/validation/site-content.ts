@@ -63,7 +63,8 @@ export const siteContentSchema = z.object({
       email: optionalText(254),
       instagram: optionalText(60),
       whatsapp: optionalText(30),
-      website: optionalText(200),
+      // Rendered as a link: only http(s), never javascript: or data:.
+      website: optionalText(200).refine((v) => v === "" || /^https?:\/\/[^\s]+$/i.test(v), "Use um endereço que comece com https://"),
     })
     .prefault({}),
   clientArea: z

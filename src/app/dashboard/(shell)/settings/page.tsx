@@ -4,6 +4,7 @@ import { PageContainer, PageHeader } from "@/components/admin/page-header";
 import { DefaultsCard } from "@/components/admin/settings/defaults-card";
 import { ProfileCard } from "@/components/admin/settings/profile-card";
 import { SecurityCard } from "@/components/admin/settings/security-card";
+import { TwoFactorCard } from "@/components/admin/settings/two-factor-card";
 import { Progress } from "@/components/ui/misc";
 import { requireUser } from "@/lib/auth/session";
 import { formatBytes } from "@/lib/utils/format";
@@ -73,6 +74,7 @@ export default async function SettingsPage() {
           </p>
         </section>
         <SecurityCard />
+        <TwoFactorCard enabled={account.twoFactorEnabled} />
         <section id="armazenamento" className="scroll-mt-24 rounded-[8px] border border-border bg-surface p-6">
           <h3 className="font-serif text-[22px] font-medium">Armazenamento</h3>
           <p className="mt-3 text-[14px] tabular-nums">

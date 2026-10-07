@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CollectionCategory, DownloadQuality, GalleryLayout } from "@/generated/prisma/enums";
 import { EXPIRY_PRESETS } from "@/lib/constants/collection";
 import { idSchema } from "./common";
+import { galleryPasswordSchema } from "./gallery-password";
 
 const isoDate = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe uma data válida"), z.literal("")]);
 
@@ -32,7 +33,7 @@ export const accessSchema = z.object({
 export const passwordSchema = z.object({
   collectionId: idSchema,
   // null removes the password
-  password: z.union([z.string().trim().min(4, "Use pelo menos 4 caracteres").max(64), z.null()]),
+  password: z.union([galleryPasswordSchema, z.null()]),
 });
 
 export const permissionsSchema = z.object({

@@ -49,5 +49,22 @@ ${paragraphs(`${input.clientName} (${input.clientEmail}) escolheu ${input.count}
   return { html, text };
 }
 
+export function passwordResetEmail(input: { studio: string; url: string }) {
+  const html = layout(
+    input.studio,
+    "#A27B5C",
+    `<h1 style="margin:0 0 20px;font:400 26px/1.25 Georgia,serif;color:#111111">Redefinir a senha do painel</h1>
+${paragraphs("Recebemos um pedido para redefinir a senha do seu painel. O link vale por 30 minutos e só pode ser usado uma vez.\n\nSe não foi você, ignore este e-mail — sua senha continua a mesma.")}
+<p style="margin:24px 0 0"><a href="${esc(input.url)}" style="display:inline-block;background:ACCENT;color:#fff;text-decoration:none;font:500 12px/1 Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;padding:14px 24px;border-radius:4px">Criar nova senha</a></p>`,
+  );
+  const text = `Redefinir a senha do painel
+
+O link vale por 30 minutos e só pode ser usado uma vez:
+${input.url}
+
+Se não foi você, ignore este e-mail.`;
+  return { html, text };
+}
+
 export const DEFAULT_GALLERY_MESSAGE = (clientName: string | null) =>
   `Olá${clientName ? `, ${clientName.split(" ")[0]}` : ""}!\n\nSuas fotos estão prontas. Foi um prazer registrar esse momento — espero que você goste de cada imagem.\n\nNa galeria você pode marcar suas favoritas com o coração e baixar as fotos.`;

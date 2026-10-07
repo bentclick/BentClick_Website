@@ -54,7 +54,7 @@ export function listReadyPhotos(db: Db, collectionId: string, galleryId: string,
 export function findClientSession(db: Db, collectionId: string, tokenHash: string) {
   return db.clientSession.findUnique({
     where: { tokenHash },
-    select: { id: true, collectionId: true, accessVersion: true, passwordOk: true, expiresAt: true, clientName: true, clientEmail: true },
+    select: { id: true, collectionId: true, accessVersion: true, passwordOk: true, expiresAt: true, clientName: true, clientEmail: true, selectionSubmittedAt: true },
   }).then((s) => (s && s.collectionId === collectionId ? s : null));
 }
 
@@ -63,6 +63,11 @@ export function createClientSession(
   data: { collectionId: string; tokenHash: string; accessVersion: number; passwordOk: boolean; expiresAt: Date; userAgent?: string; ipHash?: string },
 ) {
   return db.clientSession.create({ data, select: { id: true } });
+}
+
+/** Name and e-mail a visitor gave when the gallery asks for them (does not submit the selection). */
+export function setSessionIdentity(db: Db, clientSessionId: string, data: { clientName: string; clientEmail: string }) {
+  return db.clientSession.update({ where: { id: clientSessionId }, data: { ...data, lastSeenAt: new Date() }, select: { id: true } });
 }
 
 export function markCollectionExpired(db: Db, collectionId: string) {
