@@ -63,8 +63,15 @@ export const siteContentSchema = z.object({
       email: optionalText(254),
       instagram: optionalText(60),
       whatsapp: optionalText(30),
-      // Rendered as a link: only http(s), never javascript: or data:.
-      website: optionalText(200).refine((v) => v === "" || /^https?:\/\/[^\s]+$/i.test(v), "Use um endereço que comece com https://"),
+      // Rendered as a link: only http(s), never javascript: or data: (anything else is dropped, field by field).
+      website: z.string().trim().max(200).refine((v) => v === "" || /^https?:\/\/\S+$/i.test(v)).catch("").default(""),
+      // Contact form (messages arrive in the dashboard as leads).
+      showForm: z.boolean().catch(true).default(true),
+      formHeading: text(120, "Envie uma mensagem"),
+      formText: optionalText(300),
+      formButton: text(40, "Enviar mensagem"),
+      successTitle: text(120, "Mensagem enviada!"),
+      successText: text(300, "Obrigado pelo contato. Respondo em breve pelo e-mail ou WhatsApp que você informou."),
     })
     .prefault({}),
   clientArea: z

@@ -2,7 +2,7 @@ import "server-only";
 import type { EmailStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { defaultFrom, sendEmail } from "@/lib/email/resend";
-import { galleryReadyEmail, selectionSubmittedEmail } from "@/lib/email/templates";
+import { galleryReadyEmail, leadReceivedEmail, selectionSubmittedEmail } from "@/lib/email/templates";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { galleryUrl } from "@/lib/utils/urls";
 import { logActivity } from "@/services/activity/activity.repository";
@@ -91,6 +91,18 @@ export async function notifySelectionSubmitted(collectionId: string, clientName:
     await sendEmail({ from: defaultFrom(studio.name), to: studio.ownerEmail, subject: `Nova seleção — ${collection.title}`, html, text, replyTo: clientEmail });
   } catch (error) {
     console.error("[email] selection notification failed", error);
+  }
+}
+
+/** Contact-form message → the photographer's inbox; replying answers the visitor directly. */
+export async function notifyLeadReceived(userId: string, lead: { name: string; email: string; phone: string | null; event: string | null; message: string }) {
+  try {
+    const studio = await studioOf(userId);
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+    const { html, text } = leadReceivedEmail({ studio: studio.name, accent: studio.accent, ...lead, url: `${appUrl}/dashboard/leads` });
+    await sendEmail({ from: defaultFrom(studio.name), to: studio.ownerEmail, subject: `Novo contato pelo site — ${lead.name}`, html, text, replyTo: lead.email });
+  } catch (error) {
+    console.error("[email] lead notification failed", error);
   }
 }
 

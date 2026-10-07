@@ -13,7 +13,18 @@ export default async function AboutPage() {
 
   return (
     <main id="sobre" className="mx-auto grid max-w-[1200px] gap-16 px-5 py-20 sm:px-10 sm:py-28 lg:grid-cols-[1fr_1.3fr] lg:items-center">
-      <Monogram className="mx-auto h-56 text-taupe sm:h-72 lg:h-96" />
+      {profile?.portrait ? (
+        // eslint-disable-next-line @next/next/no-img-element -- signed R2 URL, served as-is
+        <img
+          src={profile.portrait.src}
+          width={profile.portrait.width}
+          height={profile.portrait.height}
+          alt={about.title || profile.name}
+          className="mx-auto h-auto max-h-[78vh] w-full max-w-md rounded-[4px] object-cover"
+        />
+      ) : (
+        <Monogram className="mx-auto h-56 text-taupe sm:h-72 lg:h-96" />
+      )}
       <div>
         {about.eyebrow ? <p className="eyebrow">{about.eyebrow}</p> : null}
         <h1 className="mt-5 font-serif text-5xl font-normal leading-[1.05] sm:text-6xl">{about.title || profile?.name || "BentClick Fotografia"}</h1>

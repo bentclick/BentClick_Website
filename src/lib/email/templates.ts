@@ -49,6 +49,20 @@ ${paragraphs(`${input.clientName} (${input.clientEmail}) escolheu ${input.count}
   return { html, text };
 }
 
+export function leadReceivedEmail(input: { studio: string; accent: string; name: string; email: string; phone: string | null; event: string | null; message: string; url: string }) {
+  const details = [`E-mail: ${input.email}`, input.phone ? `Telefone: ${input.phone}` : null, input.event ? `Evento: ${input.event}` : null].filter(Boolean).join("\n");
+  const html = layout(
+    input.studio,
+    input.accent,
+    `<h1 style="margin:0 0 20px;font:400 26px/1.25 Georgia,serif;color:#111111">Nova mensagem de ${esc(input.name)}</h1>
+${paragraphs(details)}
+${paragraphs(input.message)}
+<p style="margin:24px 0 0"><a href="${esc(input.url)}" style="display:inline-block;background:ACCENT;color:#fff;text-decoration:none;font:500 12px/1 Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;padding:14px 24px;border-radius:4px">Ver contatos</a></p>`,
+  );
+  const text = `Nova mensagem de ${input.name}\n\n${details}\n\n${input.message}\n\nVer contatos: ${input.url}\n\nResponda este e-mail para falar direto com ${input.name}.`;
+  return { html, text };
+}
+
 export function passwordResetEmail(input: { studio: string; url: string }) {
   const html = layout(
     input.studio,

@@ -10,7 +10,7 @@ import type { PickableImage } from "@/types/site";
 export async function getSiteEditorData(userId: string) {
   const [row, profile, images] = await Promise.all([
     prisma.siteContent.findUnique({ where: { userId }, select: { data: true } }),
-    prisma.photographerProfile.findUnique({ where: { userId }, select: { accentColor: true } }),
+    prisma.photographerProfile.findUnique({ where: { userId }, select: { accentColor: true, portraitKey: true } }),
     prisma.portfolioImage.findMany({
       where: { album: { userId }, status: "READY" },
       orderBy: [{ album: { sortOrder: "asc" } }, { sortOrder: "asc" }],
@@ -21,7 +21,12 @@ export async function getSiteEditorData(userId: string) {
   const pickable: PickableImage[] = (
     await Promise.all(images.map(async (i) => ({ id: i.id, thumbUrl: (await signDisplayUrl(i.thumbnailKey)) ?? "", album: i.album.title })))
   ).filter((i) => i.thumbUrl);
-  return { content: parseSiteContent(row?.data), accent: profile?.accentColor ?? "#A27B5C", images: pickable };
+  return {
+    content: parseSiteContent(row?.data),
+    accent: profile?.accentColor ?? "#A27B5C",
+    images: pickable,
+    portraitUrl: await signDisplayUrl(profile?.portraitKey),
+  };
 }
 
 /** Validates, keeps only the photographer's own ready images, saves and refreshes the public site now. */

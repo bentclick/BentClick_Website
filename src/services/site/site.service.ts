@@ -14,6 +14,7 @@ const getOwner = cache(() => findSiteOwnerProfile(prisma));
 export const getSite = cache(async (): Promise<{ profile: SiteProfile | null; content: SiteContent; accent: string }> => {
   const owner = await getOwner();
   const content = await readSiteContent(owner?.userId ?? null);
+  const portraitSrc = await signDisplayUrl(owner?.portraitKey);
   const profile: SiteProfile | null = owner
     ? {
         name: owner.user.name,
@@ -22,6 +23,7 @@ export const getSite = cache(async (): Promise<{ profile: SiteProfile | null; co
         email: content.contact.email || owner.replyToEmail,
         instagram: content.contact.instagram || owner.instagram,
         websiteUrl: content.contact.website || owner.websiteUrl,
+        portrait: portraitSrc ? { src: portraitSrc, width: owner.portraitWidth ?? 4, height: owner.portraitHeight ?? 5 } : null,
       }
     : null;
   return { profile, content, accent: owner?.accentColor ?? "#A27B5C" };

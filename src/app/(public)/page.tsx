@@ -21,7 +21,7 @@ export default async function HomePage() {
             case "works":
               return <HomeWorks key="works" works={content.works} images={works} />;
             case "about":
-              return <HomeAbout key="about" about={content.about} fallbackTitle={profile?.name ?? "BentClick Fotografia"} />;
+              return <HomeAbout key="about" about={content.about} fallbackTitle={profile?.name ?? "BentClick Fotografia"} portrait={profile?.portrait ?? null} />;
             case "contact":
               return <HomeContact key="contact" contact={content.contact} />;
           }

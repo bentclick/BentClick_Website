@@ -152,6 +152,7 @@ model User {
   activityLogs    ActivityLog[]
   portfolioAlbums PortfolioAlbum[]
   siteContent     SiteContent?
+  leads           Lead[]
 
   @@map("user")
 }
@@ -245,6 +246,10 @@ model PhotographerProfile {
   bio               String?
   logoKey           String?
   faviconKey        String?
+  /// Photographer's own photo (About page). Set only by the server upload, never by the site document.
+  portraitKey       String?
+  portraitWidth     Int?
+  portraitHeight    Int?
   websiteUrl        String?
   instagram         String?
   accentColor       String  @default("#A27B5C")
@@ -287,6 +292,7 @@ model Client {
 
   collections Collection[]
   emailLogs   EmailLog[]
+  leads       Lead[]
 
   @@unique([userId, email])
   @@index([userId, name])
@@ -676,4 +682,36 @@ model RateLimitBucket {
   resetAt DateTime
 
   @@map("rate_limit_bucket")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Leads — messages sent through the public contact form
+// ─────────────────────────────────────────────────────────────
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ARCHIVED
+}
+
+model Lead {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  phone     String?
+  eventType CollectionCategory?
+  eventDate DateTime?           @db.Date
+  message   String
+  status    LeadStatus          @default(NEW)
+  /// Set when the photographer turns the lead into a client.
+  clientId  String?
+  client    Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  ipHash    String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([userId, status, createdAt])
+  @@map("lead")
 }

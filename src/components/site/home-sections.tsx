@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { SiteContent } from "@/lib/validation/site-content";
-import type { PublicImage } from "@/types/site";
+import type { PublicImage, SiteProfile } from "@/types/site";
 import { PhotoMasonry } from "./photo-masonry";
 
 const outlineLink =
@@ -30,12 +30,16 @@ export function HomeWorks({ works, images }: { works: SiteContent["works"]; imag
   );
 }
 
-export function HomeAbout({ about, fallbackTitle }: { about: SiteContent["about"]; fallbackTitle: string }) {
+export function HomeAbout({ about, fallbackTitle, portrait }: { about: SiteContent["about"]; fallbackTitle: string; portrait: SiteProfile["portrait"] }) {
   const firstParagraph = about.text.split(/\n{2,}/)[0];
   return (
     <section className="border-t border-border bg-surface">
       <div className="mx-auto grid max-w-[1100px] gap-8 px-5 py-24 sm:px-10 md:grid-cols-[1fr_1.4fr] md:items-center">
         <div>
+          {portrait ? (
+            // eslint-disable-next-line @next/next/no-img-element -- signed R2 URL, served as-is
+            <img src={portrait.src} width={portrait.width} height={portrait.height} alt={about.title || fallbackTitle} className="mb-8 aspect-[4/5] w-full max-w-64 rounded-[4px] object-cover" />
+          ) : null}
           {about.eyebrow ? <p className="eyebrow">{about.eyebrow}</p> : null}
           <h2 className="mt-4 font-serif text-4xl font-normal leading-tight">{about.title || fallbackTitle}</h2>
           {about.tagline ? <p className="mt-3 font-serif text-lg italic text-muted-foreground">{about.tagline}</p> : null}

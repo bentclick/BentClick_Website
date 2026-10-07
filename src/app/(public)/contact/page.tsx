@@ -1,5 +1,6 @@
 import { AtSign, Globe, Mail, MessageCircle } from "lucide-react";
 import type { Metadata } from "next";
+import { ContactForm } from "@/components/site/contact-form";
 import { getSite } from "@/services/site/site.service";
 
 export const metadata: Metadata = { title: "Contato" };
@@ -43,9 +44,15 @@ export default async function ContactPage() {
             </li>
           ))}
         </ul>
-      ) : (
+      ) : contact.showForm ? null : (
         <p className="mt-14 font-serif text-xl italic text-muted-foreground">Canais de contato em breve.</p>
       )}
+
+      {contact.showForm ? (
+        <div className="relative mt-14">
+          <ContactForm texts={contact} />
+        </div>
+      ) : null}
     </main>
   );
 }

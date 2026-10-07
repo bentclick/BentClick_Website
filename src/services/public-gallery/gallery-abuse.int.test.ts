@@ -128,6 +128,23 @@ describe.skipIf(!run)("public gallery abuse battery", async () => {
     expect(await code(toggleFavorite(slug, photo.id))).toBe("OK"); // control after reopening
   });
 
+  it("contact form: honeypot stores nothing; 6th message from one IP in an hour is refused", async () => {
+    const { submitLead } = await import("@/services/leads/lead.service");
+    const email = `${tag}@example.test`;
+    const base = { name: "Visitante", email, phone: "", eventType: "" as const, eventDate: "", message: "Mensagem de teste da bateria." };
+    try {
+      ctx.ip = randomIp();
+      expect(await code(submitLead({ ...base, website: "http://spam.example" }))).toBe("OK"); // bot sees success…
+      expect(await prisma.lead.count({ where: { email } })).toBe(0); // …but nothing is stored
+
+      for (let i = 0; i < 5; i++) expect(await code(submitLead({ ...base, website: "" }))).toBe("OK"); // control
+      expect(await code(submitLead({ ...base, website: "" }))).toBe("RATE_LIMITED");
+      expect(await prisma.lead.count({ where: { email } })).toBe(5);
+    } finally {
+      await prisma.lead.deleteMany({ where: { email } });
+    }
+  });
+
   it("enforces 'ask name and e-mail' on the server (finding 6)", async () => {
     const { slug, photo } = await makeGallery({ requireClientIdentity: true });
     ctx.jar.clear();

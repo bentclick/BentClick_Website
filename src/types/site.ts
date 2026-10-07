@@ -16,6 +16,8 @@ export type SiteProfile = {
   email: string | null;
   instagram: string | null;
   websiteUrl: string | null;
+  /** The photographer's own photo (About page), when uploaded. */
+  portrait: { src: string; width: number; height: number } | null;
 };
 
 /** A portfolio photo that can be chosen in the site editor. */

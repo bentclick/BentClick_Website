@@ -13,13 +13,14 @@ import { HOME_SECTION_LABELS, type SiteContent } from "@/lib/validation/site-con
 import type { PickableImage } from "@/types/site";
 import { EditorSection, TextField } from "./fields";
 import { ImagePicker } from "./image-picker";
+import { PortraitField } from "./portrait-field";
 
 const ACCENTS = ["#A27B5C", "#8C6A54", "#6F7A5E", "#5E6B7A", "#9A5B4F", "#111111"];
 
-type Props = { initial: SiteContent; initialAccent: string; images: PickableImage[] };
+type Props = { initial: SiteContent; initialAccent: string; images: PickableImage[]; portraitUrl: string | null };
 
 /** Every public text, photo, colour and section — one document, saved together. */
-export function SiteEditor({ initial, initialAccent, images }: Props) {
+export function SiteEditor({ initial, initialAccent, images, portraitUrl }: Props) {
   const router = useRouter();
   const [content, setContent] = useState(initial);
   const [accent, setAccent] = useState(initialAccent);
@@ -151,6 +152,7 @@ export function SiteEditor({ initial, initialAccent, images }: Props) {
       </EditorSection>
 
       <EditorSection id="sobre" title="Sobre" description="Página Sobre e o resumo na página inicial.">
+        <PortraitField url={portraitUrl} />
         <div className="grid gap-5 sm:grid-cols-2">
           <TextField id="about-eyebrow" label="Rótulo" value={about.eyebrow} onChange={(v) => update("about", { eyebrow: v })} />
           <TextField id="about-title" label="Título" value={about.title} placeholder="Seu nome" onChange={(v) => update("about", { title: v })} />
@@ -167,8 +169,31 @@ export function SiteEditor({ initial, initialAccent, images }: Props) {
           <TextField id="contact-email" label="E-mail" value={contact.email} onChange={(v) => update("contact", { email: v })} />
           <TextField id="contact-whatsapp" label="WhatsApp" value={contact.whatsapp} placeholder="+55 11 99999-9999" onChange={(v) => update("contact", { whatsapp: v })} />
           <TextField id="contact-instagram" label="Instagram" value={contact.instagram} placeholder="@bentclick" onChange={(v) => update("contact", { instagram: v })} />
-          <TextField id="contact-website" label="Site" value={contact.website} placeholder="https://" onChange={(v) => update("contact", { website: v })} />
+          <TextField
+            id="contact-website"
+            label="Site"
+            value={contact.website}
+            placeholder="https://"
+            hint={contact.website && !/^https?:\/\/\S+$/i.test(contact.website) ? "Use o endereço completo, começando com https://" : undefined}
+            onChange={(v) => update("contact", { website: v })}
+          />
         </div>
+        <SwitchField
+          id="contact-show-form"
+          label="Mostrar formulário de mensagem"
+          description="As mensagens chegam em Contatos, no painel, e no seu e-mail."
+          checked={contact.showForm}
+          onChange={(e) => update("contact", { showForm: e.target.checked })}
+        />
+        {contact.showForm ? (
+          <>
+            <TextField id="contact-form-heading" label="Título do formulário" value={contact.formHeading} onChange={(v) => update("contact", { formHeading: v })} />
+            <TextField id="contact-form-text" label="Texto do formulário (opcional)" multiline rows={2} value={contact.formText} onChange={(v) => update("contact", { formText: v })} />
+            <TextField id="contact-form-button" label="Texto do botão" value={contact.formButton} onChange={(v) => update("contact", { formButton: v })} />
+            <TextField id="contact-success-title" label="Título após enviar" value={contact.successTitle} onChange={(v) => update("contact", { successTitle: v })} />
+            <TextField id="contact-success-text" label="Texto após enviar" multiline rows={2} value={contact.successText} onChange={(v) => update("contact", { successText: v })} />
+          </>
+        ) : null}
       </EditorSection>
 
       <EditorSection id="area-do-cliente" title="Área do cliente" description="Página onde o cliente cola o link ou código da galeria.">
