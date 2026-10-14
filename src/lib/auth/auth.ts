@@ -7,7 +7,7 @@ import { twoFactor } from "better-auth/plugins";
 import { prisma } from "@/lib/db/prisma";
 import { defaultFrom, sendEmail } from "@/lib/email/resend";
 import { passwordResetEmail } from "@/lib/email/templates";
-import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { consumeRateLimit, consumeRateLimitWindow } from "@/lib/security/rate-limit";
 import { ensurePhotographerProfile } from "@/services/profile/profile.service";
 
 export const isSignupAllowed = process.env.ALLOW_SIGNUP === "true";
@@ -40,11 +40,10 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 14, // 14 days
     updateAge: 60 * 60 * 24, // refresh daily
   },
-  // Stored in Postgres: in-memory counters reset per serverless instance.
+  // Stored in Postgres (one atomic upsert, shared with the gallery limits): in-memory counters reset per serverless instance.
   rateLimit: {
     enabled: true,
-    storage: "database",
-    modelName: "authRateLimit",
+    customStorage: { consume: (key, rule) => consumeRateLimitWindow(`auth:${key}`, rule.max, rule.window) },
     window: 60,
     max: 30,
     customRules: {
