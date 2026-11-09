@@ -43,7 +43,7 @@ export function Dropzone({ onFiles, folder = false, className }: Props) {
         {folder ? "Selecione uma pasta" : "Arraste e solte as fotos aqui"}
       </p>
       <p className="mt-1.5 text-[12.5px] text-accent">{folder ? "todas as fotos dela serão enviadas" : "ou clique para selecionar"}</p>
-      <p className="mt-4 text-[11px] text-muted-foreground">JPG, PNG, WebP e RAW · até 200 MB por arquivo</p>
+      <p className="mt-4 text-[11px] text-muted-foreground">JPG, PNG, WebP até 200 MB · RAW até 150 MB</p>
       <input
         ref={input}
         type="file"

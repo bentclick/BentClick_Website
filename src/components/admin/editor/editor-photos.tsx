@@ -44,7 +44,7 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
 
   // Photos left mid-pipeline by a closed tab get their previews generated now.
   useEffect(() => {
-    const stuck = photos.filter((p) => p.status === "UPLOADED" && !p.isRaw).map((p) => p.id);
+    const stuck = photos.filter((p) => p.status === "UPLOADED").map((p) => p.id);
     if (stuck.length) queue.resumeProcessing(stuck);
   }, [photos, queue]);
 

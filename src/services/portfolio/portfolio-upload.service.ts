@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db/prisma";
-import { InvalidImageError, renderDerivatives } from "@/lib/images/derivatives";
+import { InvalidImageError } from "@/lib/images/derivatives";
+import { renderOriginal } from "@/lib/images/raw-derivatives";
 import { getR2 } from "@/lib/r2/client";
 import { r2Keys } from "@/lib/r2/keys";
 import { deleteObjects, objectSize, presignUpload, readObject, writeObject } from "@/lib/r2/objects";
@@ -16,7 +17,7 @@ function assertStorage() {
   if (!getR2()) throw new DomainError("STORAGE_UNAVAILABLE", "O armazenamento de fotos ainda não está configurado.");
 }
 
-/** Same lifecycle as client photos (docs §7), for public portfolio images. RAW isn't accepted here. */
+/** Same lifecycle as client photos (docs §7), for public portfolio images. */
 export async function requestPortfolioUploads(
   userId: string,
   albumId: string,
@@ -31,8 +32,8 @@ export async function requestPortfolioUploads(
   const rejected: PresignResponse["rejected"] = [];
   for (const file of files) {
     const check = checkFile(file);
-    if (!check.ok || check.kind === "raw") {
-      rejected.push({ clientId: file.clientId, reason: check.ok ? "Use JPG, PNG ou WebP no portfólio" : check.reason });
+    if (!check.ok) {
+      rejected.push({ clientId: file.clientId, reason: check.reason });
       continue;
     }
     const id = newId();
@@ -89,7 +90,7 @@ export async function processPortfolioImage(userId: string, imageId: string) {
   if (count === 0) return { status: image.status };
 
   try {
-    const result = await renderDerivatives(await readObject(image.storageKey));
+    const result = await renderOriginal(await readObject(image.storageKey), image.mimeType);
     const previewKey = r2Keys.portfolioPreview(userId, image.albumId, image.id);
     const thumbnailKey = r2Keys.portfolioThumbnail(userId, image.albumId, image.id);
     await Promise.all([writeObject(previewKey, result.preview, "image/webp"), writeObject(thumbnailKey, result.thumbnail, "image/webp")]);

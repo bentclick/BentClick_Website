@@ -13,7 +13,9 @@ const IMAGE_TYPES: Record<string, string> = {
   "image/webp": "webp",
 };
 
-/** RAW formats are stored as originals only (no previews generated). */
+/** Stored type of RAW files; their previews come from the JPEG embedded by the camera. */
+export const RAW_MIME_TYPE = "application/octet-stream";
+
 const RAW_EXTENSIONS = ["cr2", "cr3", "nef", "arw", "dng", "raf", "orf", "rw2"] as const;
 
 export type FileKind = "image" | "raw";
@@ -33,7 +35,7 @@ export function checkFile(file: { name: string; type: string; size: number }): F
 
   if ((RAW_EXTENSIONS as readonly string[]).includes(ext)) {
     if (file.size > MAX_RAW_BYTES) return { ok: false, reason: "Arquivo RAW acima de 150 MB" };
-    return { ok: true, kind: "raw", extension: ext, mimeType: "application/octet-stream" };
+    return { ok: true, kind: "raw", extension: ext, mimeType: RAW_MIME_TYPE };
   }
 
   const mimeExt = IMAGE_TYPES[file.type];

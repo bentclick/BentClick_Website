@@ -1,7 +1,8 @@
 import "server-only";
 import type { PhotoStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
-import { InvalidImageError, renderDerivatives } from "@/lib/images/derivatives";
+import { InvalidImageError } from "@/lib/images/derivatives";
+import { renderOriginal } from "@/lib/images/raw-derivatives";
 import { applyWatermark } from "@/lib/images/watermark";
 import { r2Keys } from "@/lib/r2/keys";
 import { deleteObjects, readObject, writeObject } from "@/lib/r2/objects";
@@ -20,9 +21,6 @@ export async function processPhoto(userId: string, photoId: string): Promise<Pro
   const [owned] = await findOwnedPhotos(prisma, userId, [photoId]);
   if (!owned) throw new NotFoundError("Photo");
 
-  // RAW files are kept as originals only; no previews are generated.
-  if (owned.mimeType === "application/octet-stream") return { photoId, status: owned.status };
-
   const { count } = await claimForProcessing(prisma, photoId, userId);
   if (count === 0) return { photoId, status: owned.status }; // already processing or ready
 
@@ -31,7 +29,7 @@ export async function processPhoto(userId: string, photoId: string): Promise<Pro
 
   try {
     const original = await readObject(photo.storageKey);
-    const result = await renderDerivatives(original);
+    const result = await renderOriginal(original, owned.mimeType);
     // The watermark goes on the preview only; thumbnails and originals stay clean.
     const collection = await prisma.collection.findUnique({ where: { id: photo.collectionId }, select: { watermarkId: true } });
     const watermark = await loadWatermarkSpec(collection?.watermarkId ?? null);

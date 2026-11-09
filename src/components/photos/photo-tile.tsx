@@ -40,12 +40,7 @@ export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, se
         <img src={photo.thumbnailUrl} alt={photo.filename} loading="lazy" decoding="async" className="size-full object-contain" />
       ) : (
         <div className="grid size-full place-items-center p-3 text-center text-[11px] text-muted-foreground">
-          {photo.isRaw ? (
-            <span>
-              <span className="block text-[13px] font-medium tracking-[0.2em] text-foreground">RAW</span>
-              somente original
-            </span>
-          ) : busy ? (
+          {busy ? (
             <span className="flex flex-col items-center gap-2">
               <Loader2 className="size-4 animate-spin" /> Gerando prévia
             </span>
