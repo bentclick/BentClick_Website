@@ -27,6 +27,9 @@ export function findOwnedPhotos(db: Db, userId: string, photoIds: string[], stat
       fileSize: true,
       filename: true,
       status: true,
+      editedKey: true,
+      editedFileSize: true,
+      pendingEdit: true,
     },
   });
 }
@@ -78,6 +81,7 @@ export function listGalleryPhotos(db: Db, galleryId: string, take: number) {
       failureReason: true,
       isFeatured: true,
       mimeType: true,
+      editedKey: true,
     },
   });
 }

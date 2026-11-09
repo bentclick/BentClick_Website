@@ -10,7 +10,7 @@ export class UploadApiError extends Error {
   }
 }
 
-async function post<T>(url: string, body: unknown): Promise<T> {
+export async function post<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new UploadApiError(data.error ?? "Falha na comunicação com o servidor", res.status);

@@ -1,7 +1,8 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { renderDerivatives } from "@/lib/images/derivatives";
+import { displaySource, previewVersion } from "@/lib/images/photo-source";
+import { renderOriginal } from "@/lib/images/raw-derivatives";
 import { applyWatermark } from "@/lib/images/watermark";
 import { r2Keys } from "@/lib/r2/keys";
 import { deleteObjects, readObject, writeObject } from "@/lib/r2/objects";
@@ -43,14 +44,15 @@ export async function refreshPreviews(userId: string, collectionId: string, budg
     const batch = await prisma.photo.findMany({
       where: outdatedWhere(collection.id, stamp),
       take: 5,
-      select: { id: true, userId: true, collectionId: true, storageKey: true, previewKey: true },
+      select: { id: true, userId: true, collectionId: true, storageKey: true, mimeType: true, editedKey: true, editedMimeType: true, previewKey: true },
     });
     if (batch.length === 0) break;
     for (const photo of batch) {
       if (Date.now() - started >= budgetMs) break;
-      const { preview } = await renderDerivatives(await readObject(photo.storageKey));
+      const source = displaySource(photo);
+      const { preview } = await renderOriginal(await readObject(source.key), source.mimeType);
       const body = watermark ? await applyWatermark(preview, watermark.spec) : preview;
-      const key = r2Keys.preview(photo.userId, photo.collectionId, photo.id, stamp);
+      const key = r2Keys.preview(photo.userId, photo.collectionId, photo.id, previewVersion(photo.editedKey, stamp));
       await writeObject(key, body, "image/webp");
       await prisma.photo.update({ where: { id: photo.id }, data: { previewKey: key, previewStamp: stamp } });
       if (photo.previewKey && photo.previewKey !== key) await deleteObjects([photo.previewKey]);

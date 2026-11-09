@@ -20,7 +20,12 @@ async function extractPreview(raw: Buffer): Promise<Buffer> {
   return sharp(jpeg).rotate(degrees).jpeg({ quality: 95 }).toBuffer();
 }
 
+/** What image tools can actually read: the embedded JPEG for a RAW, the file itself otherwise. */
+export async function readableImage(original: Buffer, mimeType: string): Promise<Buffer> {
+  return mimeType === RAW_MIME_TYPE ? extractPreview(original) : original;
+}
+
 /** Derivatives for any stored original, RAW included. */
 export async function renderOriginal(original: Buffer, mimeType: string): Promise<Derivatives> {
-  return renderDerivatives(mimeType === RAW_MIME_TYPE ? await extractPreview(original) : original);
+  return renderDerivatives(await readableImage(original, mimeType));
 }

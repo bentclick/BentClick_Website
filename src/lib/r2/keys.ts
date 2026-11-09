@@ -13,8 +13,11 @@ export const r2Keys = {
   /** Versioned by watermark stamp so a re-rendered preview gets a new URL (no stale browser cache). */
   preview: (userId: string, collectionId: string, photoId: string, stamp?: string | null) =>
     `${collectionRoot(userId, collectionId)}/previews/${photoId}${stamp ? `.${stamp.replace(/[^\w-]/g, "-")}` : ""}.webp`,
-  thumbnail: (userId: string, collectionId: string, photoId: string) =>
-    `${collectionRoot(userId, collectionId)}/thumbnails/${photoId}.webp`,
+  thumbnail: (userId: string, collectionId: string, photoId: string, version?: string | null) =>
+    `${collectionRoot(userId, collectionId)}/thumbnails/${photoId}${version ? `.${version}` : ""}.webp`,
+  /** The token makes each edit a new object, so replacing one never overwrites what is being served. */
+  edited: (userId: string, collectionId: string, photoId: string, token: string, extension: string) =>
+    `${collectionRoot(userId, collectionId)}/edited/${photoId}.${token}.${extension}`,
   archive: (userId: string, downloadJobId: string) => `${root(userId)}/archives/${downloadJobId}.zip`,
   archivePart: (userId: string, downloadJobId: string, index: number) => `${root(userId)}/archives/${downloadJobId}/parte-${index + 1}.zip`,
   /** Lazily rendered download copies (high-res / web), cached next to the original. */

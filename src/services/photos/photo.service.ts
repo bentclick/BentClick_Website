@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db/prisma";
 import { deleteObjects } from "@/lib/r2/objects";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
+import { parsePendingEdit } from "@/lib/validation/photo-edit";
 import { DomainError, NotFoundError } from "@/services/errors";
 import { deliveryKeys } from "@/services/downloads/delivery.service";
 import { findOwnedGallery } from "@/services/galleries/gallery.repository";
@@ -26,6 +27,7 @@ export async function listEditorPhotos(userId: string, galleryId: string): Promi
       thumbnailUrl: await signDisplayUrl(row.thumbnailKey),
       color: row.dominantColor,
       isRaw: row.mimeType === "application/octet-stream",
+      isEdited: row.editedKey !== null,
       failureReason: row.failureReason,
     })),
   );
@@ -48,6 +50,8 @@ export async function deletePhotos(userId: string, photoIds: string[]): Promise<
       p.storageKey,
       p.previewKey,
       p.thumbnailKey,
+      p.editedKey,
+      parsePendingEdit(p.pendingEdit)?.key,
       ...deliveryKeys({ id: p.id, userId, collectionId: p.collectionId }),
     ].filter((k): k is string => Boolean(k))),
   );
@@ -59,7 +63,7 @@ export async function deletePhotos(userId: string, photoIds: string[]): Promise<
     for (const p of counted) {
       const g = groups.get(p.galleryId) ?? { collectionId: p.collectionId, galleryId: p.galleryId, n: 0, bytes: 0n };
       g.n += 1;
-      g.bytes += p.fileSize;
+      g.bytes += p.fileSize + (p.editedFileSize ?? 0n);
       groups.set(p.galleryId, g);
     }
     for (const g of groups.values()) await adjustCounters(tx, g.collectionId, g.galleryId, -g.n, -g.bytes);

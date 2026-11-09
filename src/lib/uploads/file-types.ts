@@ -45,6 +45,13 @@ export function checkFile(file: { name: string; type: string; size: number }): F
   return { ok: true, kind: "image", extension: mimeExt, mimeType: file.type };
 }
 
+/** An edited version is what clients receive, so it must be a finished image: never another RAW. */
+export function checkEditedFile(file: { name: string; type: string; size: number }): FileCheck {
+  const check = checkFile(file);
+  if (check.ok && check.kind === "raw") return { ok: false, reason: "Envie a versão editada em JPG, PNG ou WebP" };
+  return check;
+}
+
 /** Display-safe filename: strips paths and control characters, keeps the extension. */
 export function sanitizeFilename(name: string): string {
   const base = name.split(/[\\/]/).pop() ?? "foto";

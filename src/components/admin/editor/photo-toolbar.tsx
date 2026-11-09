@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownUp, CheckSquare, Grid2x2, Grid3x3, ImagePlus, LayoutGrid, X } from "lucide-react";
+import { ArrowDownUp, CheckSquare, Grid2x2, Grid3x3, ImagePlus, ImageUp, LayoutGrid, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { pluralize } from "@/lib/utils/format";
@@ -21,9 +21,11 @@ type Props = {
   selecting: boolean;
   onToggleSelecting: () => void;
   onAddMedia: () => void;
+  onSendEdited: () => void;
+  editedProgress: { done: number; total: number } | null;
 };
 
-export function PhotoToolbar({ galleryName, photoCount, gridSize, onGridSize, selecting, onToggleSelecting, onAddMedia }: Props) {
+export function PhotoToolbar({ galleryName, photoCount, gridSize, onGridSize, selecting, onToggleSelecting, onAddMedia, onSendEdited, editedProgress }: Props) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -52,6 +54,10 @@ export function PhotoToolbar({ galleryName, photoCount, gridSize, onGridSize, se
         </div>
         <Button variant={selecting ? "outline" : "ghost"} size="sm" onClick={onToggleSelecting} disabled={photoCount === 0}>
           {selecting ? <X strokeWidth={1.5} /> : <CheckSquare strokeWidth={1.5} />} {selecting ? "Cancelar seleção" : "Selecionar"}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onSendEdited} disabled={photoCount === 0 || editedProgress !== null} title="Escolha os arquivos exportados: cada um vai para a foto com o mesmo nome">
+          {editedProgress ? <Loader2 className="animate-spin" /> : <ImageUp strokeWidth={1.5} />}
+          {editedProgress ? `Enviando ${editedProgress.done}/${editedProgress.total}` : "Enviar editadas"}
         </Button>
         <Button size="sm" onClick={onAddMedia} className="ml-1">
           <ImagePlus strokeWidth={1.5} /> Adicionar mídia

@@ -1,6 +1,7 @@
 import "server-only";
 import type { DownloadQuality } from "@/generated/prisma/enums";
 import { deliveredFilename, type DownloadVariant, originalSatisfies, renderDownloadVariant } from "@/lib/images/download-variant";
+import { readableImage } from "@/lib/images/raw-derivatives";
 import { r2Keys } from "@/lib/r2/keys";
 import { objectSize, readObject, writeObject } from "@/lib/r2/objects";
 
@@ -28,7 +29,7 @@ export async function resolveDeliveryObject(photo: DeliverablePhoto, quality: Do
   }
   const key = r2Keys.downloadVariant(photo.userId, photo.collectionId, photo.id, variant);
   if ((await objectSize(key)) === null) {
-    const rendered = await renderDownloadVariant(await readObject(photo.storageKey), variant);
+    const rendered = await renderDownloadVariant(await readableImage(await readObject(photo.storageKey), photo.mimeType), variant);
     await writeObject(key, rendered, "image/jpeg");
   }
   return { key, filename: deliveredFilename(photo.originalFilename, true) };

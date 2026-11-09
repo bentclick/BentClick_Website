@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db/prisma";
+import { clientDeliverable } from "@/lib/images/photo-source";
 import { signDownloadUrl } from "@/lib/r2/signed-urls";
 import { clientIpHash } from "@/lib/security/client-ip";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -28,11 +29,12 @@ export async function visitorPhotoDownloadUrl(slug: string, photoId: string, pre
   if (!collection.allowIndividualDownload && !isPreview) throw new DomainError("DOWNLOAD_DISABLED", "O download está desativado nesta galeria.");
   assertVisitorIdentified(resolved);
 
-  const photo = await prisma.photo.findFirst({
+  const stored = await prisma.photo.findFirst({
     where: { id: photoId, collectionId: collection.id, status: "READY" },
-    select: { id: true, userId: true, collectionId: true, storageKey: true, mimeType: true, width: true, height: true, originalFilename: true, fileSize: true },
+    select: { id: true, userId: true, collectionId: true, storageKey: true, mimeType: true, width: true, height: true, originalFilename: true, fileSize: true, editedKey: true, editedFilename: true, editedMimeType: true, editedFileSize: true },
   });
-  if (!photo) throw new NotFoundError("Photo");
+  if (!stored) throw new NotFoundError("Photo");
+  const photo = clientDeliverable(stored);
 
   const visitor = await visitorKey(resolved);
   await enforceRateLimit(`dl:${collection.id}:${visitor.key}`, 120, 600);

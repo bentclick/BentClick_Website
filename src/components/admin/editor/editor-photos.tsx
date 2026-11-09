@@ -2,7 +2,7 @@
 
 import { Loader2, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deletePhotosAction, setCoverPhotoAction } from "@/actions/photo.actions";
 import { Dropzone } from "@/components/photos/dropzone";
@@ -10,6 +10,7 @@ import { PhotoTile } from "@/components/photos/photo-tile";
 import { UploadDialog } from "@/components/photos/upload-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { useEditedVersions } from "@/hooks/use-edited-versions";
 import { useUploadQueue } from "@/hooks/use-upload-queue";
 import { collectionUploadAdapter } from "@/lib/uploads/upload-api";
 import { cn } from "@/lib/utils/cn";
@@ -41,6 +42,10 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
   const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
   const [dragging, setDragging] = useState(false);
   const [pending, startTransition] = useTransition();
+  const edited = useEditedVersions(photos);
+  const editedInput = useRef<HTMLInputElement>(null);
+  const editedTarget = useRef<string | null>(null); // null = batch matched by filename
+  const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
 
   // Photos left mid-pipeline by a closed tab get their previews generated now.
   useEffect(() => {
@@ -90,6 +95,21 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
     });
   }
 
+  function pickEdited(photoId: string | null) {
+    editedTarget.current = photoId;
+    if (editedInput.current) {
+      editedInput.current.multiple = photoId === null;
+      editedInput.current.click();
+    }
+  }
+
+  function onEditedChosen(files: File[]) {
+    const [first] = files;
+    if (!first) return;
+    if (editedTarget.current) void edited.sendForPhoto(editedTarget.current, first);
+    else void edited.sendBatch(files);
+  }
+
   return (
     <div
       className="relative min-h-[60vh]"
@@ -119,6 +139,19 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
           setSelected(new Set());
         }}
         onAddMedia={() => setDialogOpen(true)}
+        onSendEdited={() => pickEdited(null)}
+        editedProgress={edited.progress}
+      />
+
+      <input
+        ref={editedInput}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        onChange={(e) => {
+          onEditedChosen(Array.from(e.target.files ?? []));
+          e.target.value = "";
+        }}
       />
 
       {photos.length === 0 ? (
@@ -138,6 +171,8 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
                 onSetCover={() => setCover(photo.id)}
                 onDelete={() => setConfirmDelete([photo.id])}
                 onRetry={() => queue.resumeProcessing([photo.id], true)}
+                onReplaceEdited={() => pickEdited(photo.id)}
+                onRevertEdited={() => setConfirmRevert(photo.id)}
               />
             </li>
           ))}
@@ -178,6 +213,26 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
       ) : null}
 
       <UploadDialog open={dialogOpen} onOpenChange={setDialogOpen} destinationLabel={`a galeria “${gallery.name}”`} queue={queue} items={items} />
+
+      <Dialog open={confirmRevert !== null} onOpenChange={(o) => !o && setConfirmRevert(null)}>
+        <DialogContent>
+          <DialogTitle>Voltar ao original?</DialogTitle>
+          <DialogDescription>A versão editada é apagada e o cliente volta a ver a foto original. O arquivo original continua intacto.</DialogDescription>
+          <div className="mt-6 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConfirmRevert(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (confirmRevert) void edited.revert(confirmRevert);
+                setConfirmRevert(null);
+              }}
+            >
+              Voltar ao original
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmDelete !== null} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <DialogContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, Download, ImageIcon, Loader2, MoreHorizontal, RotateCcw, Star, Trash2 } from "lucide-react";
+import { AlertCircle, Check, Download, ImageIcon, ImageUp, Loader2, MoreHorizontal, RotateCcw, Star, Trash2, Undo2 } from "lucide-react";
 import { memo } from "react";
 import {
   DropdownMenu,
@@ -21,9 +21,11 @@ type Props = {
   onSetCover: () => void;
   onDelete: () => void;
   onRetry: () => void;
+  onReplaceEdited: () => void;
+  onRevertEdited: () => void;
 };
 
-export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, selected, onToggleSelect, onSetCover, onDelete, onRetry }: Props) {
+export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, selected, onToggleSelect, onSetCover, onDelete, onRetry, onReplaceEdited, onRevertEdited }: Props) {
   const busy = photo.status === "UPLOADED" || photo.status === "PROCESSING";
   const failed = photo.status === "FAILED";
 
@@ -60,6 +62,10 @@ export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, se
         </span>
       ) : null}
 
+      {photo.isEdited ? (
+        <span className="absolute bottom-2 left-2 rounded-[3px] bg-black/60 px-1.5 py-0.5 text-[10.5px] font-medium text-white">Editada</span>
+      ) : null}
+
       <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/50 to-transparent px-2 pb-1.5 pt-6 text-[11px] text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
         {photo.filename}
       </figcaption>
@@ -93,6 +99,14 @@ export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, se
                 <Download /> Baixar original
               </a>
             </DropdownMenuItem>
+            <DropdownMenuItem disabled={photo.status !== "READY"} onSelect={onReplaceEdited}>
+              <ImageUp /> {photo.isEdited ? "Trocar versão editada" : "Enviar versão editada"}
+            </DropdownMenuItem>
+            {photo.isEdited ? (
+              <DropdownMenuItem onSelect={onRevertEdited}>
+                <Undo2 /> Voltar ao original
+              </DropdownMenuItem>
+            ) : null}
             {failed ? (
               <DropdownMenuItem onSelect={onRetry}>
                 <RotateCcw /> Gerar prévia de novo

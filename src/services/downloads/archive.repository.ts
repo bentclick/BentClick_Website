@@ -12,6 +12,10 @@ const deliverableSelect = {
   height: true,
   originalFilename: true,
   fileSize: true,
+  editedKey: true,
+  editedFilename: true,
+  editedMimeType: true,
+  editedFileSize: true,
 } as const;
 
 export function listReadyPhotosForArchive(db: Db, collectionId: string, filter: { clientSessionId?: string; photoIds?: string[] } = {}) {

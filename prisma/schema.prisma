@@ -396,6 +396,16 @@ model Photo {
   /// "<watermarkId>:<version>" the preview was rendered with; null = no watermark.
   previewStamp  String?
   thumbnailKey  String? // thumbnails/…
+
+  // Edited version: what clients see and download. storageKey (the RAW) is never touched.
+  editedKey      String?   @unique // edited/…
+  editedFilename String?
+  editedMimeType String?
+  editedFileSize BigInt?
+  editedAt       DateTime?
+  /// Upload presigned but not confirmed yet (src/lib/validation/photo-edit.ts).
+  pendingEdit    Json?
+
   status        PhotoStatus @default(PENDING_UPLOAD)
   failureReason String?
 

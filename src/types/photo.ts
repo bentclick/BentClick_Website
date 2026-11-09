@@ -10,5 +10,6 @@ export type EditorPhoto = {
   thumbnailUrl: string | null;
   color: string | null;
   isRaw: boolean;
+  isEdited: boolean;
   failureReason: string | null;
 };

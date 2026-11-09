@@ -1,6 +1,7 @@
 import "server-only";
 import type { DownloadKind, DownloadQuality } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
+import { clientDeliverable } from "@/lib/images/photo-source";
 import { r2Keys } from "@/lib/r2/keys";
 import { signDownloadUrl } from "@/lib/r2/signed-urls";
 import { sha256 } from "@/lib/security/tokens";
@@ -30,12 +31,19 @@ export type ArchiveRequest = {
   requestedByUserId?: string;
 };
 
+/** The photographer's archives hold the untouched originals; clients get the edited versions. */
+function forAudience<T extends Parameters<typeof clientDeliverable>[0]>(photos: T[], forOwner: boolean): T[] {
+  return forOwner ? photos : photos.map(clientDeliverable);
+}
+
 /** Creates (or reuses) an archive job for the photos in scope. */
 export async function requestArchive(req: ArchiveRequest): Promise<{ jobId: string }> {
-  const photos = await listReadyPhotosForArchive(prisma, req.collectionId, req.type === "FAVORITES" ? { clientSessionId: req.clientSessionId } : {});
-  if (photos.length === 0) throw new DomainError("NOTHING_TO_ZIP", "Não há fotos para baixar.");
+  const stored = await listReadyPhotosForArchive(prisma, req.collectionId, req.type === "FAVORITES" ? { clientSessionId: req.clientSessionId } : {});
+  if (stored.length === 0) throw new DomainError("NOTHING_TO_ZIP", "Não há fotos para baixar.");
+  const photos = forAudience(stored, Boolean(req.requestedByUserId));
 
-  const fingerprint = sha256(`${req.quality}:${photos.map((p) => p.id).sort().join(",")}`);
+  // Keyed by the object delivered: a new edit must never reuse a ZIP holding the previous version.
+  const fingerprint = sha256(`${req.quality}:${photos.map((p) => `${p.id}@${p.storageKey}`).sort().join(",")}`);
   const reusable = await findReusableJob(prisma, req.collectionId, fingerprint, new Date(Date.now() + 60 * 60 * 1000), req.clientSessionId ?? null);
   if (reusable) return { jobId: reusable.id };
 
@@ -96,7 +104,7 @@ export async function processArchive(jobId: string): Promise<void> {
     try {
       const photos = await listReadyPhotosForArchive(prisma, job.collectionId, { photoIds: part.photoIds });
       // Photos deleted since the request are simply left out.
-      await buildArchive(key, photos, job.quality);
+      await buildArchive(key, forAudience(photos, Boolean(job.requestedByUserId)), job.quality);
       await finishPart(prisma, part.id, { status: "READY", zipStorageKey: key, error: null });
     } catch (error) {
       console.error("[archive] part failed", job.id, part.index, error);

@@ -15,6 +15,8 @@ A ressalva é a maturidade. O projeto se declara **alpha** e estima cerca de 51%
 | Licença | MIT ou Apache-2.0. O nome e a marca ArtCraft não entram na licença: versão modificada precisa removê-los |
 | Versão web | WebAssembly + WebGL2, site estático, cerca de 4,6 MB (gzip) mais uma fonte opcional de 16 MB |
 | Integração | Modo quadro `?host=parent`, por `postMessage`, **somente na mesma origem**. Mensagens: `lightcraft:open`, `lightcraft:cmd`, `lightcraft:ready`, `lightcraft:save`, `lightcraft:dirty`, `lightcraft:failed` |
+| PC e web | Mesmo programa e mesmo código de revelação. Na web as fotos são processadas pela CPU em workers; máscaras com IA (objeto/descrição), reconhecimento de rostos e importar/exportar presets em arquivo não existem |
+| Salvamento | `lightcraft:save` entrega o arquivo exportado como `{name, bytes}`. A documentação não fala em devolver os ajustes |
 | Automação | `lightcraft.command(id, paramsJson)` executa qualquer comando do editor |
 | Formatos | DNG, CR2/CR3, ARW, NEF, RAF, RW2/RWL, PEF, ORF, SRW |
 | Exportação | JPEG, PNG, TIFF, WebP e outros |
@@ -43,22 +45,21 @@ A integração exige ajustes no CSP ativado agora, só na rota do editor:
 
 ### Fase 0: piloto (1 a 2 dias, nenhuma mudança no site)
 
-Testar a versão web fora do site com 20 a 30 RAW reais das suas câmeras.
+O programa para PC já foi aprovado pelo fotógrafo. Falta testar a versão web (`lightcraft-web-0.19.0`) fora do site com alguns RAW reais.
 
-- Avaliar cor, velocidade, exportação e estabilidade.
-- Descobrir o conteúdo exato de `lightcraft:save`, que a documentação não detalha, e se os ajustes podem ser guardados e reabertos.
-- **Critério para seguir:** você aprovar a cor e nada travar em uma sessão normal de edição.
+- Comparar cor e velocidade com o PC e checar exportação e estabilidade.
+- Verificar se os ajustes podem ser guardados e reabertos, e se copiar ajustes entre fotos funciona.
+- **Critério para seguir:** a cor igual à do PC e nada travar em uma sessão normal de edição.
 
-### Fase 1: versão editada (sem editor embutido)
+### Fase 1: versão editada (implementada)
 
-Vale mesmo que o piloto reprove o LightCraft.
+Vale mesmo que o piloto reprove o LightCraft. Só em coleções de cliente: no portfólio basta enviar o JPG.
 
-- Guardar uma **versão editada** ligada à foto, sem alterar o RAW.
-- Botão "Substituir por versão editada" e envio em lote casando pelo nome do arquivo.
-- Prévias, marca d'água e download do cliente passam a usar a versão editada.
-- Opção "voltar ao original".
+- **Versão editada** ligada à foto (JPG, PNG ou WebP), sem alterar o RAW.
+- Na grade: "Enviar editadas" (lote, casando pelo nome do arquivo) e, em cada foto, "Enviar versão editada" e "Voltar ao original".
+- Prévias, marca d'água, download e ZIP do cliente usam a versão editada. O fotógrafo continua baixando o RAW.
 
-Camadas: migração (`editedKey`, `editedAt`, `editRecipe`), `photo-edit.repository`, `photo-edit.service`, rotas de envio e botão na grade.
+Camadas: migração `photo_edited_version`, `photo-edit.repository`, `photo-edit.service`, `lib/images/photo-source`, rotas `api/photos/[id]/edit`. `editRecipe` fica para a Fase 3, se o piloto confirmar que os ajustes podem ser guardados.
 
 ### Fase 2: editor dentro do painel
 
