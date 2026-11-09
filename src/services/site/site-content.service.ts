@@ -32,13 +32,15 @@ export async function getSiteEditorData(userId: string) {
 /** Validates, keeps only the photographer's own ready images, saves and refreshes the public site now. */
 export async function saveSiteContent(userId: string, input: unknown, accent: string): Promise<SiteContent> {
   const content = siteContentSchema.parse(input);
-  if (content.hero.imageIds.length) {
+  const picked = [...content.hero.imageIds, ...content.works.imageIds];
+  if (picked.length) {
     const owned = await prisma.portfolioImage.findMany({
-      where: { id: { in: content.hero.imageIds }, album: { userId }, status: "READY" },
+      where: { id: { in: picked }, album: { userId }, status: "READY" },
       select: { id: true },
     });
     const ok = new Set(owned.map((i) => i.id));
     content.hero.imageIds = content.hero.imageIds.filter((id) => ok.has(id));
+    content.works.imageIds = content.works.imageIds.filter((id) => ok.has(id));
   }
   const data = content as unknown as Prisma.InputJsonValue;
   await prisma.$transaction([

@@ -9,6 +9,17 @@ export type PublicImage = {
   category: PortfolioCategory;
 };
 
+/** A published album as shown on the public portfolio page. */
+export type PublicAlbum = {
+  id: string;
+  slug: string;
+  title: string;
+  category: PortfolioCategory;
+  imageCount: number;
+  coverUrl: string;
+  color: string | null;
+};
+
 export type SiteProfile = {
   name: string;
   tagline: string | null;

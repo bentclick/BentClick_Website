@@ -5,8 +5,8 @@ import { type ActionResult, ok, toActionError } from "@/lib/actions/result";
 import { assertUser } from "@/lib/auth/session";
 import { idSchema } from "@/lib/validation/common";
 import { photoIdsSchema } from "@/lib/validation/gallery";
-import { createAlbumSchema, updateAlbumSchema } from "@/lib/validation/portfolio";
-import { createAlbum, deleteAlbum, deletePortfolioImages, setAlbumCover, updateAlbum } from "@/services/portfolio/portfolio.service";
+import { createAlbumSchema, moveAlbumSchema, updateAlbumSchema } from "@/lib/validation/portfolio";
+import { createAlbum, deleteAlbum, deletePortfolioImages, moveAlbum, setAlbumCover, updateAlbum } from "@/services/portfolio/portfolio.service";
 
 /** Portfolio changes show on the public site immediately (not after the ISR window). */
 function revalidatePortfolio() {
@@ -33,6 +33,13 @@ export async function updateAlbumAction(input: unknown) {
   return run(async (userId) => {
     const { albumId, ...data } = updateAlbumSchema.parse(input);
     await updateAlbum(userId, albumId, data);
+  });
+}
+
+export async function moveAlbumAction(input: unknown) {
+  return run(async (userId) => {
+    const { albumId, direction } = moveAlbumSchema.parse(input);
+    await moveAlbum(userId, albumId, direction);
   });
 }
 

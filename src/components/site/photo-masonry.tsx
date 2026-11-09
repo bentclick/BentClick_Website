@@ -8,7 +8,7 @@ const LABEL = Object.fromEntries(PORTFOLIO_CATEGORIES.map((c) => [c.value, c.lab
  * Editorial masonry via CSS columns: natural aspect ratios, hairline gutters,
  * no cards or borders. Width/height attributes reserve space before load.
  */
-export function PhotoMasonry({ images, className }: { images: PublicImage[]; className?: string }) {
+export function PhotoMasonry({ images, className, showCategory = true }: { images: PublicImage[]; className?: string; showCategory?: boolean }) {
   return (
     <ul className={cn("columns-2 gap-1.5 md:columns-3 xl:columns-4 [&>li]:mb-1.5", className)}>
       {images.map((image, i) => (
@@ -23,9 +23,11 @@ export function PhotoMasonry({ images, className }: { images: PublicImage[]; cla
             decoding="async"
             className="block h-auto w-full transition-[transform,filter] duration-700 ease-out group-hover:scale-[1.015] group-hover:brightness-[0.92]"
           />
-          <span className="caps pointer-events-none absolute bottom-3 left-3 text-[10px] tracking-[0.2em] text-white opacity-0 drop-shadow transition-opacity duration-300 group-hover:opacity-100">
-            {LABEL[image.category]}
-          </span>
+          {showCategory ? (
+            <span className="caps pointer-events-none absolute bottom-3 left-3 text-[10px] tracking-[0.2em] text-white opacity-0 drop-shadow transition-opacity duration-300 group-hover:opacity-100">
+              {LABEL[image.category]}
+            </span>
+          ) : null}
         </li>
       ))}
     </ul>

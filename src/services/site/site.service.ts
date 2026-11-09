@@ -4,9 +4,10 @@ import type { PortfolioCategory } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
 import type { SiteContent } from "@/lib/validation/site-content";
-import type { PublicImage, SiteProfile } from "@/types/site";
+import { interleave } from "@/lib/utils/interleave";
+import type { PublicAlbum, PublicImage, SiteProfile } from "@/types/site";
 import { readSiteContent } from "./site-content.service";
-import { findSiteOwnerProfile, listHeroImages, listImagesByIds, listPublicPortfolioImages } from "./site.repository";
+import { findPublicAlbumBySlug, findSiteOwnerProfile, listHeroImages, listImagesByIds, listImagesPerAlbum, listPublicAlbums, listPublicPortfolioImages } from "./site.repository";
 
 const getOwner = cache(() => findSiteOwnerProfile(prisma));
 
@@ -52,15 +53,49 @@ export async function getPortfolioImages(category: PortfolioCategory | null, tak
   return toPublicImages(await listPublicPortfolioImages(prisma, owner.userId, category, take));
 }
 
-/** The photos chosen in the site editor, in that order; otherwise up to three album covers. */
+/** Photos picked in the site editor, in the order they were picked. */
+async function chosenImages(userId: string, ids: string[]): Promise<PublicImage[]> {
+  if (ids.length === 0) return [];
+  const rows = await listImagesByIds(prisma, userId, ids);
+  const order = new Map(ids.map((id, i) => [id, i]));
+  return toPublicImages(rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)));
+}
+
+/** The photos chosen in the site editor; otherwise up to three album covers. */
 export async function getHeroImages(content: SiteContent): Promise<PublicImage[]> {
   const owner = await getOwner();
   if (!owner) return [];
-  if (content.hero.imageIds.length) {
-    const rows = await listImagesByIds(prisma, owner.userId, content.hero.imageIds);
-    const order = new Map(content.hero.imageIds.map((id, i) => [id, i]));
-    const chosen = await toPublicImages(rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)));
-    if (chosen.length) return chosen;
-  }
-  return toPublicImages(await listHeroImages(prisma, owner.userId, 3));
+  const chosen = await chosenImages(owner.userId, content.hero.imageIds);
+  return chosen.length ? chosen : toPublicImages(await listHeroImages(prisma, owner.userId, 3));
 }
+
+/** Homepage "Trabalhos": the photos chosen in the editor; otherwise alternates between published albums. */
+export async function getFeaturedWorks(content: SiteContent): Promise<PublicImage[]> {
+  const owner = await getOwner();
+  if (!owner) return [];
+  const chosen = await chosenImages(owner.userId, content.works.imageIds);
+  if (chosen.length) return chosen;
+  const albums = await listImagesPerAlbum(prisma, owner.userId, content.works.count);
+  return toPublicImages(interleave(albums.map((a) => a.images), content.works.count));
+}
+
+export async function getPublicAlbums(category: PortfolioCategory | null): Promise<PublicAlbum[]> {
+  const owner = await getOwner();
+  if (!owner) return [];
+  const albums = await listPublicAlbums(prisma, owner.userId, category);
+  const items = await Promise.all(
+    albums.map(async ({ images, _count, ...album }) => {
+      const coverUrl = await signDisplayUrl(images[0]?.previewKey);
+      return coverUrl ? { ...album, imageCount: _count.images, coverUrl, color: images[0]?.dominantColor ?? null } : null;
+    }),
+  );
+  return items.filter((a): a is PublicAlbum => a !== null);
+}
+
+export const getPublicAlbum = cache(async (slug: string) => {
+  const owner = await getOwner();
+  if (!owner) return null;
+  const album = await findPublicAlbumBySlug(prisma, owner.userId, slug);
+  if (!album) return null;
+  return { title: album.title, description: album.description, category: album.category, images: await toPublicImages(album.images) };
+});

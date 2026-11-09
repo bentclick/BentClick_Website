@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CollectionCover } from "@/components/admin/collections/collection-cover";
 import { PageContainer, PageHeader } from "@/components/admin/page-header";
+import { AlbumOrderButtons } from "@/components/admin/portfolio/album-order-buttons";
 import { NewAlbumButton } from "@/components/admin/portfolio/new-album-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
@@ -24,7 +25,7 @@ export default async function PortfolioPage() {
       <PageHeader
         title="Portfólio"
         count={albums.length || undefined}
-        description="Álbuns publicados aparecem no site, separados das entregas aos clientes."
+        description="Álbuns publicados aparecem no site, nesta mesma ordem. Use as setas para reordenar."
         actions={<NewAlbumButton />}
       />
       {albums.length === 0 ? (
@@ -36,8 +37,9 @@ export default async function PortfolioPage() {
         />
       ) : (
         <ul className="mt-8 grid grid-cols-1 gap-5 min-[480px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {albums.map((a) => (
-            <li key={a.id}>
+          {albums.map((a, i) => (
+            <li key={a.id} className="relative">
+              {albums.length > 1 ? <AlbumOrderButtons albumId={a.id} title={a.title} first={i === 0} last={i === albums.length - 1} /> : null}
               <Link href={`/dashboard/portfolio/${a.id}`} className="group block overflow-hidden rounded-[6px] border border-border bg-surface transition-colors hover:border-taupe">
                 <CollectionCover title={a.title} coverUrl={a.coverUrl} coverColor={a.coverColor} className="aspect-[4/3]" />
                 <div className="px-4 pb-4 pt-3.5">

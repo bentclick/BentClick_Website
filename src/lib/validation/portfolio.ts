@@ -13,6 +13,8 @@ export const albumInputSchema = z.object({
 export const createAlbumSchema = albumInputSchema;
 export const updateAlbumSchema = albumInputSchema.extend({ albumId: idSchema });
 
+export const moveAlbumSchema = z.object({ albumId: idSchema, direction: z.enum(["up", "down"]) });
+
 export const portfolioPresignSchema = z.object({
   albumId: idSchema,
   files: z

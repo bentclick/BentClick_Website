@@ -97,6 +97,17 @@ export async function updateAlbum(userId: string, albumId: string, input: AlbumI
   });
 }
 
+/** Swaps an album with its neighbour and renumbers them all (older albums may share the same position). */
+export async function moveAlbum(userId: string, albumId: string, direction: "up" | "down") {
+  const albums = await prisma.portfolioAlbum.findMany({ where: { userId }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }], select: { id: true } });
+  const index = albums.findIndex((a) => a.id === albumId);
+  if (index === -1) throw new NotFoundError("Album");
+  const target = index + (direction === "up" ? -1 : 1);
+  if (target < 0 || target >= albums.length) return;
+  [albums[index], albums[target]] = [albums[target]!, albums[index]!];
+  await prisma.$transaction(albums.map((a, sortOrder) => prisma.portfolioAlbum.update({ where: { id: a.id }, data: { sortOrder } })));
+}
+
 /** One cover per album; it also feeds the homepage hero. */
 export async function setAlbumCover(userId: string, imageId: string) {
   const [image] = await findOwnedImages(prisma, userId, [imageId]);

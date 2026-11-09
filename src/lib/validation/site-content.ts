@@ -41,6 +41,16 @@ export const siteContentSchema = z.object({
       line: text(240, "Casamentos · Eventos · Retratos · Ensaios · Corporativo · Produtos · Viagens"),
       buttonLabel: text(40, "Ver portfólio completo"),
       count: z.number().int().min(4).max(24).catch(12).default(12),
+      /** Portfolio image ids shown first on the homepage; empty → alternates between published albums. */
+      imageIds: z.array(z.string().max(40)).max(24).catch([]).default([]),
+    })
+    .prefault({}),
+  portfolio: z
+    .object({
+      heading: text(60, "Portfólio"),
+      text: optionalText(300),
+      /** Albums: one cover per work. Photos: every photo in one mosaic. */
+      view: z.enum(["albums", "photos"]).catch("albums").default("albums"),
     })
     .prefault({}),
   about: z

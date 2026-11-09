@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const SECTION_FOR_PATH: Record<string, string> = { "/": "abertura", "/about": "sobre", "/contact": "contato", "/cliente": "area-do-cliente", "/portfolio": "trabalhos" };
+const SECTION_FOR_PATH: Record<string, string> = { "/": "abertura", "/about": "sobre", "/contact": "contato", "/cliente": "area-do-cliente", "/portfolio": "portfolio" };
 
 /**
  * Public pages are static, so the server can't know who is looking. The

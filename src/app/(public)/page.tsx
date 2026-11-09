@@ -1,6 +1,6 @@
 import { HomeHero } from "@/components/site/home-hero";
 import { HomeAbout, HomeContact, HomeWorks } from "@/components/site/home-sections";
-import { getHeroImages, getPortfolioImages, getSite } from "@/services/site/site.service";
+import { getFeaturedWorks, getHeroImages, getSite } from "@/services/site/site.service";
 
 // Signed display URLs live for ≥ 6 h; edits revalidate immediately anyway.
 export const revalidate = 600;
@@ -9,7 +9,7 @@ export const revalidate = 600;
 export default async function HomePage() {
   const { content, profile } = await getSite();
   const showWorks = content.home.sections.some((s) => s.type === "works" && s.visible);
-  const [heroImages, works] = await Promise.all([getHeroImages(content), showWorks ? getPortfolioImages(null, content.works.count) : Promise.resolve([])]);
+  const [heroImages, works] = await Promise.all([getHeroImages(content), showWorks ? getFeaturedWorks(content) : Promise.resolve([])]);
 
   return (
     <main>

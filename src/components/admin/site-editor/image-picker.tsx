@@ -4,10 +4,10 @@ import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import type { PickableImage } from "@/types/site";
 
-type Props = { images: PickableImage[]; selected: string[]; max: number; onChange: (ids: string[]) => void };
+type Props = { images: PickableImage[]; selected: string[]; max: number; onChange: (ids: string[]) => void; fallbackHint: string };
 
-/** Pick up to `max` portfolio photos; the number shows their order in the hero slideshow. */
-export function ImagePicker({ images, selected, max, onChange }: Props) {
+/** Pick up to `max` portfolio photos; the number shows the order they appear on the site. */
+export function ImagePicker({ images, selected, max, onChange, fallbackHint }: Props) {
   if (images.length === 0) {
     return (
       <p className="rounded-[6px] border border-dashed border-taupe px-4 py-5 text-[13px] text-muted-foreground">
@@ -15,7 +15,7 @@ export function ImagePicker({ images, selected, max, onChange }: Props) {
         <Link href="/dashboard/portfolio" className="text-foreground underline underline-offset-4">
           Portfólio
         </Link>{" "}
-        para escolher as fotos da abertura. Sem escolha, usamos as capas dos álbuns publicados.
+        para escolher as fotos. {fallbackHint}
       </p>
     );
   }
@@ -55,7 +55,7 @@ export function ImagePicker({ images, selected, max, onChange }: Props) {
         })}
       </ul>
       <p className="mt-2 text-[12px] text-muted-foreground">
-        {selected.length}/{max} escolhidas · sem escolha, usamos as capas dos álbuns publicados.
+        {selected.length}/{max} escolhidas · {fallbackHint}
       </p>
     </div>
   );

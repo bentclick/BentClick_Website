@@ -33,6 +33,47 @@ export function listPublicPortfolioImages(db: Db, userId: string, category: Port
   });
 }
 
+const readyImage = { status: "READY", previewKey: { not: null } } as const;
+const albumOrder = [{ sortOrder: "asc" }, { createdAt: "desc" }] as const;
+const coverFirst = [{ isCover: "desc" }, { sortOrder: "asc" }] as const;
+
+/** Published albums that have something to show, in the order set in the dashboard. */
+export function listPublicAlbums(db: Db, userId: string, category: PortfolioCategory | null) {
+  return db.portfolioAlbum.findMany({
+    where: { userId, isPublished: true, images: { some: readyImage }, ...(category ? { category } : {}) },
+    orderBy: [...albumOrder],
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      category: true,
+      _count: { select: { images: { where: readyImage } } },
+      images: { where: readyImage, orderBy: [...coverFirst], take: 1, select: { previewKey: true, dominantColor: true } },
+    },
+  });
+}
+
+/** Up to `perAlbum` photos of each published album (cover first), so a large album can't crowd out the others. */
+export function listImagesPerAlbum(db: Db, userId: string, perAlbum: number) {
+  return db.portfolioAlbum.findMany({
+    where: { userId, isPublished: true },
+    orderBy: [...albumOrder],
+    select: { images: { where: readyImage, orderBy: [...coverFirst], take: perAlbum, select: publicImageSelect } },
+  });
+}
+
+export function findPublicAlbumBySlug(db: Db, userId: string, slug: string) {
+  return db.portfolioAlbum.findFirst({
+    where: { userId, slug, isPublished: true },
+    select: {
+      title: true,
+      description: true,
+      category: true,
+      images: { where: readyImage, orderBy: { sortOrder: "asc" }, take: 300, select: publicImageSelect },
+    },
+  });
+}
+
 export function listHeroImages(db: Db, userId: string, take: number) {
   return db.portfolioImage.findMany({
     where: { isCover: true, previewKey: { not: null }, album: { userId, isPublished: true } },

@@ -6,7 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { saveSiteContentAction } from "@/actions/site.actions";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/field";
+import { Label, Select } from "@/components/ui/field";
 import { SwitchField } from "@/components/ui/switch-field";
 import { cn } from "@/lib/utils/cn";
 import { HOME_SECTION_LABELS, type SiteContent } from "@/lib/validation/site-content";
@@ -57,7 +57,7 @@ export function SiteEditor({ initial, initialAccent, images, portraitUrl }: Prop
     });
   }
 
-  const { hero, works, about, contact, clientArea, footer, home } = content;
+  const { hero, works, portfolio, about, contact, clientArea, footer, home } = content;
 
   return (
     <div className="grid gap-6">
@@ -110,7 +110,7 @@ export function SiteEditor({ initial, initialAccent, images, portraitUrl }: Prop
         </div>
         <div className="grid gap-2">
           <Label>Fotos da abertura</Label>
-          <ImagePicker images={images} selected={hero.imageIds} max={5} onChange={(ids) => update("hero", { imageIds: ids })} />
+          <ImagePicker images={images} selected={hero.imageIds} max={5} onChange={(ids) => update("hero", { imageIds: ids })} fallbackHint="Sem escolha, usamos as capas dos álbuns publicados." />
         </div>
       </EditorSection>
 
@@ -138,16 +138,34 @@ export function SiteEditor({ initial, initialAccent, images, portraitUrl }: Prop
         </ol>
       </EditorSection>
 
-      <EditorSection id="trabalhos" title="Trabalhos" description="Seção com fotos dos álbuns publicados do portfólio.">
+      <EditorSection id="trabalhos" title="Trabalhos" description="As fotos que aparecem logo de cara na página inicial.">
         <TextField id="works-eyebrow" label="Rótulo" value={works.eyebrow} onChange={(v) => update("works", { eyebrow: v })} />
         <TextField id="works-heading" label="Título" value={works.heading} onChange={(v) => update("works", { heading: v })} />
         <TextField id="works-line" label="Linha de apoio" value={works.line} onChange={(v) => update("works", { line: v })} />
         <div className="grid gap-5 sm:grid-cols-2">
           <TextField id="works-button" label="Texto do botão" value={works.buttonLabel} onChange={(v) => update("works", { buttonLabel: v })} />
-          <div className="grid gap-2">
-            <Label htmlFor="works-count">Quantidade de fotos · {works.count}</Label>
-            <input id="works-count" type="range" min={4} max={24} step={1} value={works.count} onChange={(e) => update("works", { count: Number(e.target.value) })} className="accent-[var(--accent)]" />
-          </div>
+          {works.imageIds.length === 0 ? (
+            <div className="grid gap-2">
+              <Label htmlFor="works-count">Quantidade de fotos · {works.count}</Label>
+              <input id="works-count" type="range" min={4} max={24} step={1} value={works.count} onChange={(e) => update("works", { count: Number(e.target.value) })} className="accent-[var(--accent)]" />
+            </div>
+          ) : null}
+        </div>
+        <div className="grid gap-2">
+          <Label>Fotos em destaque</Label>
+          <ImagePicker images={images} selected={works.imageIds} max={24} onChange={(ids) => update("works", { imageIds: ids })} fallbackHint="Sem escolha, alternamos fotos de todos os álbuns publicados." />
+        </div>
+      </EditorSection>
+
+      <EditorSection id="portfolio" title="Portfólio" description="A página Portfólio. A ordem dos álbuns é definida em Portfólio, no painel.">
+        <TextField id="portfolio-heading" label="Título" value={portfolio.heading} onChange={(v) => update("portfolio", { heading: v })} />
+        <TextField id="portfolio-text" label="Texto de apoio (opcional)" multiline rows={2} value={portfolio.text} onChange={(v) => update("portfolio", { text: v })} />
+        <div className="grid gap-2">
+          <Label htmlFor="portfolio-view">Como mostrar os trabalhos</Label>
+          <Select id="portfolio-view" value={portfolio.view} onChange={(e) => update("portfolio", { view: e.target.value as SiteContent["portfolio"]["view"] })}>
+            <option value="albums">Álbuns: uma capa por trabalho</option>
+            <option value="photos">Fotos: todas juntas em mosaico</option>
+          </Select>
         </div>
       </EditorSection>
 
