@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { cspHeaderName, PUBLIC_CSP_SOURCE, publicCsp } from "./src/lib/security/csp";
 
 const nextConfig: NextConfig = {
   // Native argon2 binding must not be bundled.
@@ -22,6 +23,7 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
+      { source: PUBLIC_CSP_SOURCE, headers: [{ key: cspHeaderName(), value: publicCsp() }] },
     ];
   },
 };

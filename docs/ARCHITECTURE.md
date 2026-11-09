@@ -347,6 +347,7 @@ Photographer branding in client galleries (logo, accent, font pair from a curate
 | 12 | Settings, clients CRUD, watermarks (preview-only, versioned), collection Design tab | done |
 | — | Security scan 2026-10-07 (docs/SEGURANCA-2026-10-07.md): login limiter in Postgres, 2FA (TOTP + backup codes), password reset, gallery password policy and per-gallery lock, per-IP limits, closed selections, identity enforcement | done |
 | 14 | Portfolio views: album pages (`/portfolio/[slug]`), albums or mosaic view, featured photos on the homepage, album ordering in the dashboard | done |
+| 15 | RAW previews from the embedded JPEG (collections and portfolio) and Content-Security-Policy (`lib/security/csp.ts`, nonce in `proxy.ts`, `/api/csp-report`) | done |
 | 13 | Photographer portrait (About + home), contact form → leads ("Contatos" in the dashboard, convert to client, e-mail notification) | done |
 
 Public pages use ISR (`revalidate = 600`) and therefore read the database at build time.

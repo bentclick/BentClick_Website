@@ -1,5 +1,6 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
+import { cspHeaderName, strictCsp } from "@/lib/security/csp";
 
 /**
  * Cheap optimistic gate: no session cookie → /login. This is NOT the
@@ -20,9 +21,20 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard/collections", request.url));
   }
 
-  return NextResponse.next();
+  return withCsp(request);
 }
 
+/** Next reads the nonce from the request header and stamps it on its own scripts; the browser enforces the response header. */
+function withCsp(request: NextRequest) {
+  const policy = strictCsp(Buffer.from(crypto.randomUUID()).toString("base64"));
+  const headers = new Headers(request.headers);
+  headers.set("content-security-policy", policy);
+  const response = NextResponse.next({ request: { headers } });
+  response.headers.set(cspHeaderName(), policy);
+  return response;
+}
+
+// Same areas as STRICT_PREFIXES in lib/security/csp.ts; a test compares them.
 export const config = {
-  matcher: ["/dashboard/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/login", "/esqueci-senha", "/redefinir-senha", "/g/:path*"],
 };
