@@ -14,7 +14,7 @@
 export const STRICT_PREFIXES = ["dashboard", "login", "esqueci-senha", "redefinir-senha", "g"] as const;
 
 /** The RAW editor, our build of LightCraft (vendor/lightcraft): public/lightcraft/<version>. Bumping it means testing it first. */
-export const LIGHTCRAFT_VERSION = "0.20.0-bentclick.1";
+export const LIGHTCRAFT_VERSION = "0.20.0-bentclick.2";
 export const LIGHTCRAFT_BASE = `/lightcraft/${LIGHTCRAFT_VERSION}`;
 /** Its only inline script; csp.test.ts recomputes this from the file. */
 export const LIGHTCRAFT_INLINE_SCRIPT_HASH = "sha256-4HgEuelxRDuqDvdKlQvpBManpPXKzOs1Wui7fv3wL/w=";

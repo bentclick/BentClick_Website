@@ -65,9 +65,9 @@ Camadas: migração `photo_edited_version`, `photo-edit.repository`, `photo-edit
 
 Os ajustes não são guardados: só a imagem aplicada fica no site.
 
-O LightCraft web oficial (0.19.0 e 0.20.0) trava ao revelar qualquer RAW: um panic de relógio no wasm (issue #4017). Por isso o site usa uma versão compilada por nós, `0.20.0-bentclick.1`, com a correção e sem a marca ArtCraft, como a licença da marca exige. Os patches e o script de compilação ficam em `vendor/lightcraft`. A correção também foi enviada ao projeto: storytold/lightcraft#4031.
+O LightCraft web oficial (0.19.0 e 0.20.0) trava ao revelar qualquer RAW: um panic de relógio no wasm (issue #4017). Por isso o site usa uma versão compilada por nós, `0.20.0-bentclick.2`, com a correção e sem a marca ArtCraft, como a licença da marca exige. Os patches e o script de compilação ficam em `vendor/lightcraft`. A correção também foi enviada ao projeto: storytold/lightcraft#4031.
 
-- Arquivos da nossa versão em `public/lightcraft/0.20.0-bentclick.1`, com licenças, NOTICE e a licença da fonte; sem a fonte chinesa.
+- Arquivos da nossa versão em `public/lightcraft/0.20.0-bentclick.2`, com licenças, NOTICE e a licença da fonte; sem a fonte chinesa.
 - Tela `dashboard/revelar/[photoId]` com o quadro em `?host=parent&store=idb`. `store=memory` não serve: nele o RAW nunca é revelado, só a prévia da câmera.
 - A biblioteca do editor fica no IndexedDB `lightcraft` do nosso domínio. A página apaga esse banco ao abrir e ao sair, para os RAWs não se acumularem no navegador. Por isso a tela de boas-vindas do LightCraft aparece a cada sessão.
 - Botão "Aplicar à foto": pede ao editor `app.export` (JPEG em tamanho cheio) e sobe o resultado. A janela Exportar do próprio editor exige preencher "Pasta" na web; recusa exportações de outras fotos da biblioteca (as de demonstração).

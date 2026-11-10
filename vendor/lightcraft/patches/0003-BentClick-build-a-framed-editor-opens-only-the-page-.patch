@@ -1,0 +1,61 @@
+From 4af33eedf30ccd0613fc39f3ba943cd80a9e4c82 Mon Sep 17 00:00:00 2001
+From: bentclick <338634745+bentclick@users.noreply.github.com>
+Date: Tue, 10 Nov 2026 08:37:10 -0300
+Subject: [PATCH] BentClick build: a framed editor opens only the page's photo
+
+With ?host=parent the library starts without the demo photos, and the first-run tour and the browser-storage notices stay hidden: the page hands the photo in and keeps the original itself.
+---
+ apps/lightcraft-web/src/web.rs | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/apps/lightcraft-web/src/web.rs b/apps/lightcraft-web/src/web.rs
+index 79773918b..d32ee616e 100644
+--- a/apps/lightcraft-web/src/web.rs
++++ b/apps/lightcraft-web/src/web.rs
+@@ -386,6 +386,7 @@ struct Boot {
+ }
+ 
+ async fn boot(opts: Options, bridge: Option<crate::host::Bridge>) -> Boot {
++    let framed = bridge.is_some();
+     let t0 = perf_now();
+     let backend = if opts.store == "memory" {
+         None
+@@ -446,8 +447,8 @@ async fn boot(opts: Options, bridge: Option<crate::host::Bridge>) -> Boot {
+             Ok(None) => {}
+             Err(e) => log::warn!("reading the thumbnail index: {e}"),
+         }
+-        crate::backend::request_persistence(|granted| {
+-            if !granted {
++        crate::backend::request_persistence(move |granted| {
++            if !granted && !framed {
+                 notice(
+                     "This browser may delete LightCraft's library when it runs short of space (persistent storage wasn't granted). \
+                      Keep your original photos elsewhere and use File ▸ Back Up Library… now and then.",
+@@ -554,7 +555,7 @@ impl WebApp {
+         let read_failed = load_error.is_some();
+         let opened = match load_error {
+             Some(e) => Err(format!("{e}. Nothing was changed in storage")),
+-            None => session.open_library_in(stores, true).cloned().map_err(|e| e.to_string()),
++            None => session.open_library_in(stores, bridge.is_none()).cloned().map_err(|e| e.to_string()),
+         };
+         match opened {
+             Ok(r) => log::info!(
+@@ -583,7 +584,7 @@ impl WebApp {
+         if opts.bench && backend.is_none() && session.catalog.len() == 0 {
+             lightcraft_engine::demo::load(&mut session);
+         }
+-        if backend.is_some() {
++        if backend.is_some() && bridge.is_none() {
+             notice(
+                 "LightCraft in the browser is experimental. Your library is kept in this browser's storage: keep your original photos \
+                  elsewhere and back up with File ▸ Back Up Library….",
+@@ -608,6 +609,9 @@ impl WebApp {
+             app.ui = ui;
+         }
+         app.ui = app.ui.sanitized();
++        if bridge.is_some() {
++            app.ui.seen_version = Some(env!("CARGO_PKG_VERSION").to_string());
++        }
+         app.library_problem = problem;
+         let n = opts.workers.unwrap_or_else(|| {
+             let cores = window().map_or(1, |w| w.navigator().hardware_concurrency() as usize);

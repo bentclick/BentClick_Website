@@ -4,7 +4,7 @@ O editor da tela "Revelar no site" (`/dashboard/revelar/[photoId]`) é o [LightC
 
 Assim não precisamos esperar uma versão oficial para corrigir um defeito.
 
-## Versão atual: `0.20.0-bentclick.1`
+## Versão atual: `0.20.0-bentclick.2`
 
 Base: tag oficial `v0.20.0`. Patches em `patches/`, aplicados em ordem:
 
@@ -12,6 +12,7 @@ Base: tag oficial `v0.20.0`. Patches em `patches/`, aplicados em ordem:
 |---|---|---|
 | `0001` | Troca o relógio da remoção de hot pixels por `web_time`. Sem isso, o editor web trava ao revelar qualquer RAW ("time not implemented on this platform"). | storytold/lightcraft#4031 (issue #4017) |
 | `0002` | Tira a marca ArtCraft: Discord e site no menu Ajuda, na barra superior, na janela Sobre e nas traduções. | Não: só vale para a nossa versão |
+| `0003` | Dentro de uma página (`?host=parent`), a biblioteca começa vazia, sem as fotos de demonstração. Também esconde a tela de boas-vindas e os avisos de armazenamento do navegador. O editor mostra só a foto que o site abre. | Não, por enquanto |
 
 ## Licença
 

@@ -5,7 +5,7 @@
 set -euo pipefail
 
 TAG=v0.20.0
-VERSION=0.20.0-bentclick.1   # keep equal to LIGHTCRAFT_VERSION in src/lib/security/csp.ts
+VERSION=0.20.0-bentclick.2   # keep equal to LIGHTCRAFT_VERSION in src/lib/security/csp.ts
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SITE="$(cd "$HERE/../.." && pwd)"
 WORK="${1:?usage: build.sh <empty work dir>}"

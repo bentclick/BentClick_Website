@@ -51,8 +51,9 @@ export const APPLY_EDIT_COMMAND = {
 const baseName = (filename: string) => filename.replace(/\.[^.]+$/, "").toLowerCase();
 
 /**
- * Whether an export came from the photo being edited. The editor's library also holds its demo photos, and exports
- * are named after their source (`{name}`, plus a number when one is taken), so another source means another photo.
+ * Whether an export came from the photo being edited. The framed editor starts with only that photo (patch 0003), but
+ * the person can still import others into it, and exports are named after their source (`{name}`, plus a number when
+ * one is taken), so another source means another photo.
  */
 export function isExportOf(originalFilename: string, savedName: string): boolean {
   return baseName(savedName).startsWith(baseName(originalFilename));
