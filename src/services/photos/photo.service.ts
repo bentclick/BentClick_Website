@@ -25,6 +25,7 @@ export async function listEditorPhotos(userId: string, galleryId: string): Promi
       height: row.height,
       sizeBytes: Number(row.fileSize),
       thumbnailUrl: await signDisplayUrl(row.thumbnailKey),
+      previewUrl: await signDisplayUrl(row.previewKey),
       color: row.dominantColor,
       isRaw: row.mimeType === "application/octet-stream",
       isEdited: row.editedKey !== null,

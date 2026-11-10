@@ -1,6 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { clientFilename } from "@/lib/images/photo-source";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
 import { clientIpHash } from "@/lib/security/client-ip";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -71,7 +72,7 @@ export async function sessionFavoritePhotos(clientSessionId: string): Promise<Pu
   return Promise.all(
     rows.map(async (p) => ({
       id: p.id,
-      filename: p.filename,
+      filename: clientFilename(p),
       width: p.width ?? 3,
       height: p.height ?? 2,
       color: p.dominantColor,

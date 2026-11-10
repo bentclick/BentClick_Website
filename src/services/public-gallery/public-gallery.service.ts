@@ -2,6 +2,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
+import { clientFilename } from "@/lib/images/photo-source";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
 import { CLIENT_SESSION_DAYS, readGalleryToken, writeGalleryToken } from "@/lib/security/gallery-cookie";
 import { verifyGalleryPassword } from "@/lib/security/password";
@@ -83,7 +84,7 @@ export async function photoPage(collectionId: string, galleryId: string, cursor?
   const photos = await Promise.all(
     page.map(async (p) => ({
       id: p.id,
-      filename: p.filename,
+      filename: clientFilename(p),
       width: p.width ?? 3,
       height: p.height ?? 2,
       color: p.dominantColor,

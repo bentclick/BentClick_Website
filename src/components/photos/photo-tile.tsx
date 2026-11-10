@@ -24,9 +24,11 @@ type Props = {
   onRetry: () => void;
   onReplaceEdited: () => void;
   onRevertEdited: () => void;
+  /** Opens the full-screen viewer; absent while the photo has no preview. */
+  onOpen?: () => void;
 };
 
-export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, selected, onToggleSelect, onSetCover, onDelete, onRetry, onReplaceEdited, onRevertEdited }: Props) {
+export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, selected, onToggleSelect, onSetCover, onDelete, onRetry, onReplaceEdited, onRevertEdited, onOpen }: Props) {
   const busy = photo.status === "UPLOADED" || photo.status === "PROCESSING";
   const failed = photo.status === "FAILED";
 
@@ -57,14 +59,18 @@ export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, se
         </div>
       )}
 
+      {onOpen && !selecting ? (
+        <button type="button" onClick={onOpen} aria-label={`Ampliar ${photo.filename}`} className="absolute inset-0 cursor-zoom-in focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent" />
+      ) : null}
+
       {isCover ? (
-        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-[3px] bg-accent px-1.5 py-0.5 text-[10.5px] font-medium text-white">
+        <span className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-[3px] bg-accent px-1.5 py-0.5 text-[10.5px] font-medium text-white">
           <Star className="size-3 fill-current" /> Capa
         </span>
       ) : null}
 
       {photo.isEdited ? (
-        <span className="absolute bottom-2 left-2 rounded-[3px] bg-black/60 px-1.5 py-0.5 text-[10.5px] font-medium text-white">Editada</span>
+        <span className="pointer-events-none absolute bottom-2 left-2 rounded-[3px] bg-black/60 px-1.5 py-0.5 text-[10.5px] font-medium text-white">Editada</span>
       ) : null}
 
       <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/50 to-transparent px-2 pb-1.5 pt-6 text-[11px] text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">

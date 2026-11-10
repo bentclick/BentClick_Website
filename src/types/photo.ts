@@ -8,6 +8,8 @@ export type EditorPhoto = {
   height: number | null;
   sizeBytes: number;
   thumbnailUrl: string | null;
+  /** Larger rendition for the full-screen viewer; null until the preview exists. */
+  previewUrl: string | null;
   color: string | null;
   isRaw: boolean;
   isEdited: boolean;

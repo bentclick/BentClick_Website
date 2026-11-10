@@ -15,6 +15,8 @@ import { useUploadQueue } from "@/hooks/use-upload-queue";
 import { collectionUploadAdapter } from "@/lib/uploads/upload-api";
 import { cn } from "@/lib/utils/cn";
 import type { EditorPhoto } from "@/types/photo";
+import { viewablePhotos } from "@/lib/images/viewer-photos";
+import { PhotoViewer } from "./photo-viewer";
 import { type GridSize, PhotoToolbar } from "./photo-toolbar";
 
 const GRID: Record<GridSize, string> = {
@@ -46,6 +48,9 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
   const editedInput = useRef<HTMLInputElement>(null);
   const editedTarget = useRef<string | null>(null); // null = batch matched by filename
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
+  const viewable = useMemo(() => viewablePhotos(photos), [photos]);
+  const canView = useMemo(() => new Set(viewable.map((p) => p.id)), [viewable]);
 
   // Photos left mid-pipeline by a closed tab get their previews generated now.
   useEffect(() => {
@@ -173,6 +178,7 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
                 onRetry={() => queue.resumeProcessing([photo.id], true)}
                 onReplaceEdited={() => pickEdited(photo.id)}
                 onRevertEdited={() => setConfirmRevert(photo.id)}
+                onOpen={canView.has(photo.id) ? () => setViewing(photo.id) : undefined}
               />
             </li>
           ))}
@@ -248,6 +254,8 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
           </div>
         </DialogContent>
       </Dialog>
+
+      {viewing ? <PhotoViewer photos={viewable} startId={viewing} onClose={() => setViewing(null)} /> : null}
     </div>
   );
 }

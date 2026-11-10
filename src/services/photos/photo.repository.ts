@@ -77,6 +77,7 @@ export function listGalleryPhotos(db: Db, galleryId: string, take: number) {
       height: true,
       fileSize: true,
       thumbnailKey: true,
+      previewKey: true,
       dominantColor: true,
       failureReason: true,
       isFeatured: true,

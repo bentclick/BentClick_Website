@@ -47,7 +47,7 @@ export function listReadyPhotos(db: Db, collectionId: string, galleryId: string,
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     take: take + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    select: { id: true, filename: true, width: true, height: true, dominantColor: true, thumbnailKey: true, previewKey: true },
+    select: { id: true, filename: true, editedFilename: true, width: true, height: true, dominantColor: true, thumbnailKey: true, previewKey: true },
   });
 }
 

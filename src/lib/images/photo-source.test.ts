@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clientDeliverable, displaySource, editToken, previewVersion } from "./photo-source";
+import { clientDeliverable, clientFilename, displaySource, editToken, previewVersion } from "./photo-source";
 
 const RAW = { storageKey: "o/a.arw", mimeType: "application/octet-stream", originalFilename: "a.arw", fileSize: 100n };
 const NOT_EDITED = { ...RAW, editedKey: null, editedMimeType: null, editedFilename: null, editedFileSize: null };
@@ -32,5 +32,15 @@ describe("clientDeliverable", () => {
 
   it("leaves unedited photos alone", () => {
     expect(clientDeliverable(NOT_EDITED)).toBe(NOT_EDITED);
+  });
+});
+
+describe("clientFilename", () => {
+  it("names an edited RAW after its edited file", () => {
+    expect(clientFilename({ filename: "DSC03035.ARW", editedFilename: "DSC03035.jpg" })).toBe("DSC03035.jpg");
+  });
+
+  it("keeps the uploaded name without an edit", () => {
+    expect(clientFilename({ filename: "DSC03035.jpg", editedFilename: null })).toBe("DSC03035.jpg");
   });
 });

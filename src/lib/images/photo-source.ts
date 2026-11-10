@@ -35,3 +35,8 @@ export function clientDeliverable<T extends Deliverable>(photo: T): T {
   if (!photo.editedKey || !photo.editedMimeType || !photo.editedFilename || photo.editedFileSize === null) return photo;
   return { ...photo, storageKey: photo.editedKey, mimeType: photo.editedMimeType, originalFilename: photo.editedFilename, fileSize: photo.editedFileSize };
 }
+
+/** The name a client sees: the edited file's ("DSC0001.jpg") once there is one, never the RAW's. */
+export function clientFilename(photo: { filename: string; editedFilename: string | null }): string {
+  return photo.editedFilename ?? photo.filename;
+}

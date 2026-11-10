@@ -35,10 +35,10 @@ const SAMPLE: CollectionListItem[] = [
 ];
 
 const SAMPLE_PHOTOS: EditorPhoto[] = [
-  { id: "cdevphoto1", filename: "DSC_1024.jpg", status: "READY", width: 3000, height: 2000, sizeBytes: 8_400_000, thumbnailUrl: null, color: "#a27b5c", isRaw: false, isEdited: false, failureReason: null },
-  { id: "cdevphoto2", filename: "DSC_1025.jpg", status: "PROCESSING", width: null, height: null, sizeBytes: 7_100_000, thumbnailUrl: null, color: null, isRaw: false, isEdited: false, failureReason: null },
-  { id: "cdevphoto3", filename: "DSC_1026.CR3", status: "UPLOADED", width: null, height: null, sizeBytes: 41_000_000, thumbnailUrl: null, color: null, isRaw: true, isEdited: false, failureReason: null },
-  { id: "cdevphoto4", filename: "DSC_1027.jpg", status: "FAILED", width: null, height: null, sizeBytes: 6_800_000, thumbnailUrl: null, color: null, isRaw: false, isEdited: false, failureReason: "Falha ao gerar a pré-visualização" },
+  { id: "cdevphoto1", filename: "DSC_1024.jpg", status: "READY", width: 3000, height: 2000, sizeBytes: 8_400_000, thumbnailUrl: null, previewUrl: null, color: "#a27b5c", isRaw: false, isEdited: false, failureReason: null },
+  { id: "cdevphoto2", filename: "DSC_1025.jpg", status: "PROCESSING", width: null, height: null, sizeBytes: 7_100_000, thumbnailUrl: null, previewUrl: null, color: null, isRaw: false, isEdited: false, failureReason: null },
+  { id: "cdevphoto3", filename: "DSC_1026.CR3", status: "UPLOADED", width: null, height: null, sizeBytes: 41_000_000, thumbnailUrl: null, previewUrl: null, color: null, isRaw: true, isEdited: false, failureReason: null },
+  { id: "cdevphoto4", filename: "DSC_1027.jpg", status: "FAILED", width: null, height: null, sizeBytes: 6_800_000, thumbnailUrl: null, previewUrl: null, color: null, isRaw: false, isEdited: false, failureReason: "Falha ao gerar a pré-visualização" },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
