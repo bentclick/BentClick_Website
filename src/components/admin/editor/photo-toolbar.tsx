@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowDownUp, CheckSquare, Grid2x2, Grid3x3, ImagePlus, ImageUp, LayoutGrid, Loader2, X } from "lucide-react";
+import { ArrowDownUp, CheckSquare, Grid2x2, Grid3x3, ImagePlus, ImageUp, LayoutGrid, Loader2, SlidersHorizontal, X } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { pluralize } from "@/lib/utils/format";
@@ -23,9 +24,11 @@ type Props = {
   onAddMedia: () => void;
   onSendEdited: () => void;
   editedProgress: { done: number; total: number } | null;
+  /** The whole gallery in the editor; null when no photo is ready yet. */
+  developHref: string | null;
 };
 
-export function PhotoToolbar({ galleryName, photoCount, gridSize, onGridSize, selecting, onToggleSelecting, onAddMedia, onSendEdited, editedProgress }: Props) {
+export function PhotoToolbar({ galleryName, photoCount, gridSize, onGridSize, selecting, onToggleSelecting, onAddMedia, onSendEdited, editedProgress, developHref }: Props) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -59,6 +62,14 @@ export function PhotoToolbar({ galleryName, photoCount, gridSize, onGridSize, se
           {editedProgress ? <Loader2 className="animate-spin" /> : <ImageUp strokeWidth={1.5} />}
           {editedProgress ? `Enviando ${editedProgress.done}/${editedProgress.total}` : "Enviar editadas"}
         </Button>
+        {developHref ? (
+          // the editor only runs on a computer
+          <Button variant="ghost" size="sm" asChild className="max-lg:hidden">
+            <Link href={developHref} title="Abre todas as fotos desta galeria no editor, para editar e salvar de uma vez">
+              <SlidersHorizontal strokeWidth={1.5} /> Revelar no site
+            </Link>
+          </Button>
+        ) : null}
         <Button size="sm" onClick={onAddMedia} className="ml-1">
           <ImagePlus strokeWidth={1.5} /> Adicionar mídia
         </Button>

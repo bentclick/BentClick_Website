@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { APPLY_EDIT_COMMAND, exportedFileSpec, isExportOf, parseEditorMessage } from "./lightcraft-messages";
+import { APPLY_EDIT_COMMAND, exportedFileSpec, parseEditorMessage } from "./lightcraft-messages";
 
 describe("parseEditorMessage", () => {
   it("reads the editor's messages", () => {
@@ -22,18 +22,6 @@ describe("APPLY_EDIT_COMMAND", () => {
     expect(params).toMatchObject({ format: "jpeg" });
     expect(params.dir).toBeTruthy();
     for (const key of ["resize", "longEdge", "shortEdge", "width", "height", "percent", "megapixels"]) expect(params).not.toHaveProperty(key);
-  });
-});
-
-describe("isExportOf", () => {
-  it("accepts exports of the photo being edited", () => {
-    expect(isExportOf("DSC03035.ARW", "DSC03035.jpg")).toBe(true);
-    expect(isExportOf("DSC03035.ARW", "dsc03035-2.JPG")).toBe(true);
-  });
-
-  it("refuses another photo of the editor's library", () => {
-    expect(isExportOf("DSC03035.ARW", "LC00312.jpg")).toBe(false);
-    expect(isExportOf("DSC03035.ARW", "DSC0303.jpg")).toBe(false);
   });
 });
 

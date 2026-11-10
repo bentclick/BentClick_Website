@@ -22,7 +22,25 @@ function layout(studio: string, rawAccent: string, inner: string) {
 </td></tr></table></body></html>`.replace(/ACCENT/g, accent);
 }
 
-export function galleryReadyEmail(input: { studio: string; accent: string; title: string; message: string; url: string; password?: boolean }) {
+type GalleryPassword = { password?: boolean; passwordValue?: string | null };
+
+/** The gallery password written out when the site can read it; otherwise only a note that one is needed. */
+function passwordBlock(input: GalleryPassword) {
+  if (input.passwordValue) {
+    return `<p style="margin:0 0 6px;font:13px/1.5 Arial,sans-serif;color:#77736d;text-align:center">Senha da galeria</p>
+<p style="margin:0 0 20px;text-align:center"><span style="display:inline-block;border:1px solid #e8e5df;border-radius:4px;background:#f8f7f4;padding:10px 16px;font:600 16px/1 'Courier New',monospace;letter-spacing:1px;color:#111111">${esc(input.passwordValue)}</span></p>`;
+  }
+  return input.password
+    ? `<p style="margin:0 0 12px;font:13px/1.5 Arial,sans-serif;color:#77736d;text-align:center">A galeria é protegida por senha — ela foi enviada separadamente pelo fotógrafo.</p>`
+    : "";
+}
+
+function passwordText(input: GalleryPassword) {
+  if (input.passwordValue) return `\nSenha da galeria: ${input.passwordValue}\n`;
+  return input.password ? "\nA galeria é protegida por senha.\n" : "";
+}
+
+export function galleryReadyEmail(input: { studio: string; accent: string; title: string; message: string; url: string } & GalleryPassword) {
   const button = `<a href="${esc(input.url)}" style="display:inline-block;background:ACCENT;color:#ffffff;text-decoration:none;font:500 12px/1 Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;padding:16px 28px;border-radius:4px">Ver galeria</a>`;
   const html = layout(
     input.studio,
@@ -30,10 +48,10 @@ export function galleryReadyEmail(input: { studio: string; accent: string; title
     `<h1 style="margin:0 0 24px;text-align:center;font:400 30px/1.2 Georgia,serif;color:#111111;letter-spacing:2px;text-transform:uppercase">${esc(input.title)}</h1>
 ${paragraphs(input.message)}
 <p style="margin:28px 0;text-align:center">${button}</p>
-${input.password ? `<p style="margin:0 0 12px;font:13px/1.5 Arial,sans-serif;color:#77736d;text-align:center">A galeria é protegida por senha — ela foi enviada separadamente pelo fotógrafo.</p>` : ""}
+${passwordBlock(input)}
 <p style="margin:0;font:12px/1.5 Arial,sans-serif;color:#77736d;text-align:center;word-break:break-all">${esc(input.url)}</p>`,
   );
-  const text = `${input.title.toUpperCase()}\n\n${input.message}\n\nVer galeria: ${input.url}\n${input.password ? "\nA galeria é protegida por senha.\n" : ""}\n— ${input.studio}`;
+  const text = `${input.title.toUpperCase()}\n\n${input.message}\n\nVer galeria: ${input.url}\n${passwordText(input)}\n—${input.studio}`;
   return { html, text };
 }
 

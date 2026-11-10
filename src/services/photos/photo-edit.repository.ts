@@ -34,3 +34,27 @@ export function savePendingEdit(db: Db, photoId: string, pending: Prisma.InputJs
 export function swapEditedVersion(db: Db, photo: EditablePhoto, data: Prisma.PhotoUpdateManyMutationInput) {
   return db.photo.updateMany({ where: { id: photo.id, userId: photo.userId, editedKey: photo.editedKey }, data });
 }
+
+type DevelopScope = { galleryId?: string; photoIds?: string[] };
+
+const developable = (userId: string, collectionId: string, scope: DevelopScope): Prisma.PhotoWhereInput => ({
+  userId,
+  collectionId,
+  status: "READY",
+  ...(scope.galleryId ? { galleryId: scope.galleryId } : {}),
+  ...(scope.photoIds ? { id: { in: scope.photoIds } } : {}),
+});
+
+/** Ready photos of one of the owner's collections, in grid order, optionally narrowed to a gallery or to given ids. */
+export async function findDevelopablePhotos(db: Db, userId: string, collectionId: string, scope: DevelopScope, take: number) {
+  const where = developable(userId, collectionId, scope);
+  const [rows, total] = await Promise.all([
+    db.photo.findMany({ where, orderBy: [{ gallery: { sortOrder: "asc" } }, { sortOrder: "asc" }, { createdAt: "asc" }], take, select: { id: true, originalFilename: true } }),
+    db.photo.count({ where }),
+  ]);
+  return { rows, total };
+}
+
+export function findOwnedCollectionTitle(db: Db, userId: string, collectionId: string) {
+  return db.collection.findFirst({ where: { id: collectionId, userId }, select: { id: true, title: true } });
+}

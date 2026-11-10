@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { defaultFrom, sendEmail } from "@/lib/email/resend";
 import { galleryReadyEmail, leadReceivedEmail, selectionSubmittedEmail } from "@/lib/email/templates";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { openSecret } from "@/lib/security/secret-box";
 import { galleryUrl } from "@/lib/utils/urls";
 import { logActivity } from "@/services/activity/activity.repository";
 import { DomainError, NotFoundError } from "@/services/errors";
@@ -27,7 +28,7 @@ async function studioOf(userId: string) {
 export async function sendGalleryEmail(userId: string, input: { collectionId: string; recipient: string; subject: string; message: string }) {
   const collection = await prisma.collection.findFirst({
     where: { id: input.collectionId, userId },
-    select: { id: true, title: true, slug: true, status: true, clientId: true, passwordHash: true, linkEnabled: true },
+    select: { id: true, title: true, slug: true, status: true, clientId: true, passwordHash: true, passwordSealed: true, linkEnabled: true },
   });
   if (!collection) throw new NotFoundError("Collection");
   if (collection.status !== "PUBLISHED" || !collection.linkEnabled) {
@@ -49,6 +50,7 @@ export async function sendGalleryEmail(userId: string, input: { collectionId: st
     message: input.message,
     url: galleryUrl(collection.slug),
     password: collection.passwordHash !== null,
+    passwordValue: collection.passwordHash !== null ? openSecret(collection.passwordSealed) : null,
   });
   const result = await sendEmail({ from: defaultFrom(studio.name), to: input.recipient, subject: input.subject, html, text, replyTo: studio.replyTo });
 

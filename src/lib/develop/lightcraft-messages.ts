@@ -48,16 +48,8 @@ export const APPLY_EDIT_COMMAND = {
   params: JSON.stringify({ dir: "bentclick", format: "jpeg", quality: 92 }),
 } as const;
 
-const baseName = (filename: string) => filename.replace(/\.[^.]+$/, "").toLowerCase();
-
-/**
- * Whether an export came from the photo being edited. The framed editor starts with only that photo (patch 0003), but
- * the person can still import others into it, and exports are named after their source (`{name}`, plus a number when
- * one is taken), so another source means another photo.
- */
-export function isExportOf(originalFilename: string, savedName: string): boolean {
-  return baseName(savedName).startsWith(baseName(originalFilename));
-}
+/** "Salvar todas": select every photo of the session first, so the export above covers them all. */
+export const SELECT_ALL_COMMAND = { type: "lightcraft:cmd", id: "library.selectAll", params: "{}" } as const;
 
 /** An export the site can deliver, named after the photo. Library backups and TIFF return null. */
 export function exportedFileSpec(originalFilename: string, savedName: string): { name: string; type: string } | null {

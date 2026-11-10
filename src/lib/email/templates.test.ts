@@ -22,4 +22,16 @@ describe("galleryReadyEmail", () => {
     expect(html).toContain(base.url);
     expect(text).toContain(base.url);
   });
+
+  it("writes out a readable password, escaped, in both versions", () => {
+    const { html, text } = galleryReadyEmail({ ...base, password: true, passwordValue: "Praia-Sol-1234<" });
+    expect(html).toContain("Praia-Sol-1234&lt;");
+    expect(text).toContain("Senha da galeria: Praia-Sol-1234<");
+  });
+
+  it("only notes the password when it can't be read", () => {
+    const { html, text } = galleryReadyEmail({ ...base, password: true, passwordValue: null });
+    expect(html).toContain("protegida por senha");
+    expect(text).not.toContain("Senha da galeria:");
+  });
 });

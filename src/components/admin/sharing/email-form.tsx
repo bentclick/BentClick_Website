@@ -47,7 +47,7 @@ export function EmailForm({ collectionId, defaultRecipient, defaultMessage, publ
         <Label htmlFor="mail-message">Mensagem</Label>
         <Textarea id="mail-message" rows={7} value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} aria-invalid={!!errors.message} />
         <FieldError message={errors.message?.[0]} />
-        <FieldHint>O e-mail inclui o botão “Ver galeria” com o link. A senha, se houver, não é enviada.</FieldHint>
+        <FieldHint>O e-mail inclui o botão “Ver galeria” com o link. Se a galeria tiver senha, ela vai junto no e-mail.</FieldHint>
       </div>
       <div>
         <Button type="submit" disabled={pending || !published}>

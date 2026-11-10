@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, Trash2, Upload } from "lucide-react";
+import { Loader2, SlidersHorizontal, Trash2, Upload } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import { collectionUploadAdapter } from "@/lib/uploads/upload-api";
 import { cn } from "@/lib/utils/cn";
 import type { EditorPhoto } from "@/types/photo";
 import { viewablePhotos } from "@/lib/images/viewer-photos";
+import { MAX_DEVELOP_BATCH } from "@/lib/develop/develop-batch";
 import { PhotoViewer } from "./photo-viewer";
 import { type GridSize, PhotoToolbar } from "./photo-toolbar";
 
@@ -51,6 +53,9 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
   const [viewing, setViewing] = useState<string | null>(null);
   const viewable = useMemo(() => viewablePhotos(photos), [photos]);
   const canView = useMemo(() => new Set(viewable.map((p) => p.id)), [viewable]);
+  const developBase = `/dashboard/revelar/colecao/${collectionId}`;
+  const hasReady = photos.some((p) => p.status === "READY");
+  const readySelected = photos.filter((p) => selected.has(p.id) && p.status === "READY").map((p) => p.id);
 
   // Photos left mid-pipeline by a closed tab get their previews generated now.
   useEffect(() => {
@@ -146,6 +151,7 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
         onAddMedia={() => setDialogOpen(true)}
         onSendEdited={() => pickEdited(null)}
         editedProgress={edited.progress}
+        developHref={hasReady ? `${developBase}?galeria=${gallery.id}` : null}
       />
 
       <input
@@ -201,6 +207,13 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set(photos.map((p) => p.id)))}>
             Selecionar todas
           </Button>
+          {readySelected.length > 0 && readySelected.length <= MAX_DEVELOP_BATCH ? (
+            <Button size="sm" variant="ghost" asChild className="max-lg:hidden">
+              <Link href={`${developBase}?fotos=${readySelected.join(",")}`}>
+                <SlidersHorizontal /> Revelar
+              </Link>
+            </Button>
+          ) : null}
           <Button size="sm" variant="danger" onClick={() => setConfirmDelete([...selected])}>
             <Trash2 /> Excluir
           </Button>
