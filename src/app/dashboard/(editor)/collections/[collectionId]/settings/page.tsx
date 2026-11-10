@@ -27,6 +27,7 @@ export default async function CollectionSettingsPage({ params }: { params: Promi
     isPrivate: collection.isPrivate,
     requireClientIdentity: collection.requireClientIdentity,
     hasPassword: collection.hasPassword,
+    password: collection.password,
     linkEnabled: collection.linkEnabled,
     allowFavorites: collection.allowFavorites,
     allowIndividualDownload: collection.allowIndividualDownload,
@@ -44,7 +45,7 @@ export default async function CollectionSettingsPage({ params }: { params: Promi
       </header>
       <DetailsCard key={`d-${collection.title}-${view.eventDate}`} collection={view} clients={clients} />
       <ExpiryCard collection={view} />
-      <AccessCard key={`a-${view.hasPassword}`} collection={view} />
+      <AccessCard key={`a-${view.password ?? view.hasPassword}`} collection={view} />
       <PermissionsCard collection={view} />
       <LinkCard collection={view} />
     </div>

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CollectionCategory, DownloadQuality } from "@/generated/prisma/enums";
 import { EXPIRY_PRESETS } from "@/lib/constants/collection";
+import { galleryPasswordSchema } from "./gallery-password";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe uma data válida");
 const optionalIsoDate = z.union([isoDate, z.literal("")]);
@@ -38,8 +39,10 @@ export const createCollectionSchema = z
     if (value.expiryPreset === "custom" && !value.customExpiry) {
       ctx.addIssue({ code: "custom", path: ["customExpiry"], message: "Escolha a data de expiração" });
     }
-    if (value.requirePassword && value.password.trim().length < 4) {
-      ctx.addIssue({ code: "custom", path: ["password"], message: "Use pelo menos 4 caracteres" });
+    if (value.requirePassword) {
+      // the same policy as Configurações ▸ Acesso
+      const check = galleryPasswordSchema.safeParse(value.password);
+      if (!check.success) ctx.addIssue({ code: "custom", path: ["password"], message: check.error.issues[0]?.message ?? "Senha inválida" });
     }
   });
 

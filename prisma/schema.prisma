@@ -314,6 +314,9 @@ model Collection {
   expiresAt     DateTime?
   isPrivate     Boolean   @default(false) // hidden from photographer's public site listings
   passwordHash  String? // argon2id; null = no PIN/password
+  // The same password sealed (AES-256-GCM, lib/security/secret-box) so the photographer can read it again.
+  // null with a passwordHash = set before it was kept readable.
+  passwordSealed String?
   // Bumped whenever slug/password changes → invalidates every ClientSession.
   accessVersion Int       @default(1)
 

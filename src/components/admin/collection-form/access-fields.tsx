@@ -1,12 +1,15 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { type UseFormReturn, useWatch } from "react-hook-form";
+import { Button } from "@/components/ui/button";
 import { FieldError, FieldHint, Input, Label, Select } from "@/components/ui/field";
 import { SwitchField } from "@/components/ui/switch-field";
 import { DownloadQuality } from "@/generated/prisma/enums";
 import { DOWNLOAD_QUALITY_LABELS, EXPIRY_PRESETS, EXPIRY_PRESET_LABELS } from "@/lib/constants/collection";
 import type { CreateCollectionInput } from "@/lib/validation/collection";
+import { suggestGalleryPassword } from "@/lib/validation/gallery-password";
 import type { WatermarkOption } from "@/types/watermark";
 
 type Props = { form: UseFormReturn<CreateCollectionInput>; watermarks: WatermarkOption[] };
@@ -52,16 +55,22 @@ export function AccessFields({ form, watermarks }: Props) {
         <SwitchField id="isPrivate" label="Galeria privada" description="Acesso apenas por link, fora do site público." {...form.register("isPrivate")} />
         <SwitchField id="requirePassword" label="Exigir senha" {...form.register("requirePassword")} />
         {requirePassword ? (
-          <div className="ml-[42px] mt-1 grid max-w-56 gap-1.5">
-            <Input
-              type="text"
-              aria-label="Senha ou PIN da galeria"
-              placeholder="Senha ou PIN"
-              autoComplete="off"
-              spellCheck={false}
-              aria-invalid={!!errors.password}
-              {...form.register("password")}
-            />
+          <div className="ml-[42px] mt-1 grid gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="text"
+                className="max-w-56 font-mono"
+                aria-label="Senha da galeria"
+                autoComplete="off"
+                spellCheck={false}
+                aria-invalid={!!errors.password}
+                {...form.register("password")}
+              />
+              <Button type="button" variant="ghost" size="sm" onClick={() => form.setValue("password", suggestGalleryPassword(), { shouldValidate: true })}>
+                <RefreshCw /> Gerar outra
+              </Button>
+            </div>
+            <FieldHint>Criada automaticamente. Você copia e envia ao cliente em Configurações ▸ Acesso.</FieldHint>
             <FieldError message={errors.password?.message} />
           </div>
         ) : null}

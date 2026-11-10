@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db/prisma";
 import { hashGalleryPassword } from "@/lib/security/password";
+import { sealSecret } from "@/lib/security/secret-box";
 import type { AccessInput, DetailsInput, ExpiryInput, PermissionsInput } from "@/lib/validation/collection-settings";
 import { logActivity } from "@/services/activity/activity.repository";
 import { findOwnedClient } from "@/services/clients/client.repository";
@@ -72,8 +73,10 @@ export async function updateAccess(userId: string, input: AccessInput) {
 export async function setPassword(userId: string, collectionId: string, password: string | null) {
   const collection = await owned(userId, collectionId);
   const passwordHash = password ? await hashGalleryPassword(password) : null;
+  // the hash checks visitors; the sealed copy lets the photographer read it again
+  const passwordSealed = password ? sealSecret(password) : null;
   await prisma.$transaction(async (tx) => {
-    await tx.collection.update({ where: { id: collection.id }, data: { passwordHash } });
+    await tx.collection.update({ where: { id: collection.id }, data: { passwordHash, passwordSealed } });
     await tx.clientSession.updateMany({ where: { collectionId: collection.id }, data: { passwordOk: false } });
     await logActivity(tx, { userId, collectionId: collection.id, actorType: "PHOTOGRAPHER", type: "PASSWORD_CHANGED", metadata: { enabled: Boolean(password) } });
   });

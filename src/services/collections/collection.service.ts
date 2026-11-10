@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { DEFAULT_GALLERY_NAME } from "@/lib/constants/collection";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
 import { hashGalleryPassword } from "@/lib/security/password";
+import { openSecret, sealSecret } from "@/lib/security/secret-box";
 import { generateGallerySlug } from "@/lib/security/tokens";
 import type { CollectionFilters, CreateCollectionInput } from "@/lib/validation/collection";
 import { logActivity } from "@/services/activity/activity.repository";
@@ -74,10 +75,12 @@ export async function hasAnyCollections(userId: string): Promise<boolean> {
 export const getCollectionForEditor = cache(async (userId: string, collectionId: string) => {
   const collection = await findOwnedCollectionForEditor(prisma, userId, collectionId);
   if (!collection) throw new NotFoundError("Collection");
-  const { passwordHash, totalBytes, coverPhoto, ...rest } = collection;
+  const { passwordHash, passwordSealed, totalBytes, coverPhoto, ...rest } = collection;
   return {
     ...rest,
     hasPassword: passwordHash !== null,
+    // owner-only page: the photographer reads the password to send it; null when it was set before it was kept
+    password: passwordHash !== null ? openSecret(passwordSealed) : null,
     totalBytes: Number(totalBytes),
     status: effectiveStatus(collection.status, collection.expiresAt),
     coverUrl: await signDisplayUrl(coverPhoto?.previewKey ?? coverPhoto?.thumbnailKey),
@@ -94,10 +97,8 @@ export type CollectionEditorData = Awaited<ReturnType<typeof getCollectionForEdi
 // ─── Commands ─────────────────────────────────────────────────
 
 export async function createCollection(userId: string, input: CreateCollectionInput): Promise<{ id: string }> {
-  const [slug, passwordHash] = await Promise.all([
-    uniqueSlug(),
-    input.requirePassword ? hashGalleryPassword(input.password.trim()) : Promise.resolve(null),
-  ]);
+  const password = input.requirePassword ? input.password.trim() : null;
+  const [slug, passwordHash] = await Promise.all([uniqueSlug(), password ? hashGalleryPassword(password) : Promise.resolve(null)]);
 
   const profile = await prisma.photographerProfile.findUnique({ where: { userId }, select: { defaultLayout: true } });
 
@@ -121,6 +122,7 @@ export async function createCollection(userId: string, input: CreateCollectionIn
       expiresAt: resolveExpiry(input.expiryPreset, input.customExpiry),
       isPrivate: input.isPrivate,
       passwordHash,
+      passwordSealed: password ? sealSecret(password) : null,
       allowFavorites: input.allowFavorites,
       allowIndividualDownload: input.allowIndividualDownload,
       allowFullDownload: input.allowFullDownload,
@@ -189,6 +191,7 @@ export async function duplicateCollection(userId: string, collectionId: string):
     expiresAt: source.expiresAt,
     isPrivate: source.isPrivate,
     passwordHash: source.passwordHash,
+    passwordSealed: source.passwordSealed,
     allowFavorites: source.allowFavorites,
     allowIndividualDownload: source.allowIndividualDownload,
     allowFullDownload: source.allowFullDownload,

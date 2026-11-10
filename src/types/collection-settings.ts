@@ -14,6 +14,8 @@ export type CollectionSettingsView = {
   isPrivate: boolean;
   requireClientIdentity: boolean;
   hasPassword: boolean;
+  /** The current password, for the photographer to copy; null when none, or set before it was kept readable. */
+  password: string | null;
   linkEnabled: boolean;
   allowFavorites: boolean;
   allowIndividualDownload: boolean;

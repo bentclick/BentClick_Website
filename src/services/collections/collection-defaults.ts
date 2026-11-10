@@ -1,6 +1,7 @@
 import type { PhotographerProfile } from "@/generated/prisma/client";
 import { EXPIRY_PRESETS, type ExpiryPreset } from "@/lib/constants/collection";
 import type { CreateCollectionInput } from "@/lib/validation/collection";
+import { suggestGalleryPassword } from "@/lib/validation/gallery-password";
 
 function presetFromDays(days: number | null): ExpiryPreset {
   if (days === null) return "never";
@@ -18,8 +19,9 @@ export function defaultCollectionInput(profile: PhotographerProfile): CreateColl
     expiryPreset: presetFromDays(profile.defaultExpiryDays),
     customExpiry: "",
     isPrivate: true,
-    requirePassword: false,
-    password: "",
+    // every new gallery starts protected by a fresh random password the photographer can read later
+    requirePassword: true,
+    password: suggestGalleryPassword(),
     allowFavorites: profile.defaultAllowFavorites,
     allowIndividualDownload: profile.defaultAllowIndividualDownload,
     allowFullDownload: profile.defaultAllowFullDownload,
