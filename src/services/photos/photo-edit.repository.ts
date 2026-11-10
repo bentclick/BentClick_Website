@@ -14,6 +14,7 @@ export function findEditablePhoto(db: Db, userId: string, photoId: string) {
       status: true,
       storageKey: true,
       mimeType: true,
+      originalFilename: true,
       previewKey: true,
       thumbnailKey: true,
       editedKey: true,

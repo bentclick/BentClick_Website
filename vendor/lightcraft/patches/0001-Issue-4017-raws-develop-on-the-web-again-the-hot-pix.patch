@@ -1,0 +1,50 @@
+From 9c2f5ff5fbfee0fe3ecc860844722639f74454fa Mon Sep 17 00:00:00 2001
+From: bentclick <338634745+bentclick@users.noreply.github.com>
+Date: Mon, 9 Nov 2026 21:06:31 -0300
+Subject: [PATCH 1/2] Issue #4017: raws develop on the web again (the hot-pixel
+ timer panicked on wasm32)
+
+`load_bytes_decoded` timed Remove Hot Pixels (#1345) with `std::time::Instant::now()`, which
+panics on wasm32-unknown-unknown ("time not implemented on this platform"). The option is on for
+newly imported raws, so in the web build every raw showed its camera preview and then failed with
+`RuntimeError: unreachable`. It now reads the clock through `web_time`, as the rest of the engine
+does.
+
+A test reads the raw loaders' sources for `std::time::Instant`: no CI job runs tests on wasm32.
+---
+ crates/engine/src/files/load.rs  |  2 +-
+ crates/engine/src/files/tests.rs | 11 +++++++++++
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/crates/engine/src/files/load.rs b/crates/engine/src/files/load.rs
+index 0e396dd81..317522a29 100644
+--- a/crates/engine/src/files/load.rs
++++ b/crates/engine/src/files/load.rs
+@@ -105,7 +105,7 @@ fn load_bytes_now(
+         };
+         // single outlier photosites, replaced in the mosaic before anything is developed from it (#1345)
+         if with.outliers {
+-            let t = std::time::Instant::now();
++            let t = web_time::Instant::now();
+             let n = raw.suppress_hot_pixels_with(super::hot_pixel_limit());
+             if lightcraft_pipeline::profiling() {
+                 eprintln!("[profile] raw outliers: {n} photosites replaced in {:.1} ms", t.elapsed().as_secs_f64() * 1e3);
+diff --git a/crates/engine/src/files/tests.rs b/crates/engine/src/files/tests.rs
+index 599d173f7..6c985d74d 100644
+--- a/crates/engine/src/files/tests.rs
++++ b/crates/engine/src/files/tests.rs
+@@ -1876,3 +1876,14 @@ fn v5_extends_a_dng_tone_curve_past_white_in_stops() {
+     let (white, beyond) = (at(Process::V5, 0.0), at(Process::V5, 1.0));
+     assert!(beyond < 254.0 && beyond - white >= 3.0, "{white} then {beyond} a stop past the sensor's white");
+ }
++
++/// `std::time::Instant::now()` panics on wasm32-unknown-unknown ("time not implemented on this platform"), and the
++/// web build develops every raw through these loaders: the hot-pixel timer in `load.rs` (on for newly imported raws)
++/// made raws fail there with `RuntimeError: unreachable`, after showing the camera preview. No CI job runs tests on
++/// wasm32, so this reads the sources instead.
++#[test]
++fn raw_loaders_read_the_clock_through_web_time() {
++    for (file, src) in [("load.rs", include_str!("load.rs")), ("preview.rs", include_str!("preview.rs"))] {
++        assert!(!src.contains("std::time::Instant"), "{file}: use web_time::Instant, std's panics on wasm32");
++    }
++}

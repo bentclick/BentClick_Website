@@ -13,8 +13,14 @@
 /** Keep equal to the matcher in src/proxy.ts (a test compares them); Next requires that one to be literal. */
 export const STRICT_PREFIXES = ["dashboard", "login", "esqueci-senha", "redefinir-senha", "g"] as const;
 
-/** Excludes the strict areas: two policies on one response would both apply. */
-export const PUBLIC_CSP_SOURCE = `/:path((?!(?:${STRICT_PREFIXES.join("|")})(?:/|$)).*)`;
+/** The RAW editor, our build of LightCraft (vendor/lightcraft): public/lightcraft/<version>. Bumping it means testing it first. */
+export const LIGHTCRAFT_VERSION = "0.20.0-bentclick.1";
+export const LIGHTCRAFT_BASE = `/lightcraft/${LIGHTCRAFT_VERSION}`;
+/** Its only inline script; csp.test.ts recomputes this from the file. */
+export const LIGHTCRAFT_INLINE_SCRIPT_HASH = "sha256-4HgEuelxRDuqDvdKlQvpBManpPXKzOs1Wui7fv3wL/w=";
+
+/** Excludes the strict areas and the editor: two policies on one response would both apply. */
+export const PUBLIC_CSP_SOURCE = `/:path((?!(?:${[...STRICT_PREFIXES, "lightcraft"].join("|")})(?:/|$)).*)`;
 
 export const CSP_REPORT_PATH = "/api/csp-report";
 
@@ -54,6 +60,27 @@ export function publicCsp(env: Env = process.env): string {
 /** 'unsafe-inline' and https: are fallbacks for old browsers; nonce + strict-dynamic make modern ones ignore them. */
 export function strictCsp(nonce: string, env: Env = process.env): string {
   return build([`'nonce-${nonce}'`, "'strict-dynamic'", "'unsafe-inline'", "https:"], env, isDev(env));
+}
+
+/**
+ * The editor runs in a frame of our own panel and shares its origin, so it gets
+ * the narrowest policy that lets it work: WebAssembly but never eval, and no
+ * network beyond its own files. The panel talks to storage, the editor doesn't.
+ */
+export function lightcraftCsp(): string {
+  return [
+    "default-src 'none'",
+    `script-src 'self' '${LIGHTCRAFT_INLINE_SCRIPT_HASH}' 'wasm-unsafe-eval'`,
+    "worker-src 'self'",
+    "style-src 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'self'",
+    `report-uri ${CSP_REPORT_PATH}`,
+  ].join("; ");
 }
 
 export function cspHeaderName(env: Env = process.env): string {

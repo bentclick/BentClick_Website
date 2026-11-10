@@ -1,9 +1,12 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { NextRequest } from "next/server";
 // @ts-expect-error -- Next does not publish types for the path-to-regexp it compiles in.
 import { pathToRegexp } from "next/dist/compiled/path-to-regexp";
 import { describe, expect, it } from "vitest";
 import { config, proxy } from "@/proxy";
-import { cspHeaderName, publicCsp, PUBLIC_CSP_SOURCE, storageOrigins, STRICT_PREFIXES, strictCsp, summarizeCspReport } from "./csp";
+import { cspHeaderName, LIGHTCRAFT_BASE, LIGHTCRAFT_INLINE_SCRIPT_HASH, lightcraftCsp, publicCsp, PUBLIC_CSP_SOURCE, storageOrigins, STRICT_PREFIXES, strictCsp, summarizeCspReport } from "./csp";
 
 const PROD = { NODE_ENV: "production", R2_ACCOUNT_ID: "acct", R2_BUCKET: "media" };
 const STORAGE = "https://media.acct.r2.cloudflarestorage.com";
@@ -44,11 +47,33 @@ describe("policies", () => {
   });
 });
 
+describe("editor policy", () => {
+  it("allows WebAssembly but never eval, and no outside network", () => {
+    const policy = lightcraftCsp();
+    expect(policy).toContain("'wasm-unsafe-eval'");
+    expect(policy).not.toContain("'unsafe-eval'");
+    expect(policy).toContain("connect-src 'self';");
+    expect(policy).toContain("frame-ancestors 'self'");
+  });
+
+  it("matches the inline script of the shipped editor", () => {
+    // the browser hashes the script after HTML parsing turns CRLF into LF, so a Windows checkout must match too
+    const html = readFileSync(join(process.cwd(), "public", LIGHTCRAFT_BASE, "index.html"), "utf8").replace(/\r\n?/g, "\n");
+    const inline = /<script type="module">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
+    expect(`sha256-${createHash("sha256").update(inline).digest("base64")}`).toBe(LIGHTCRAFT_INLINE_SCRIPT_HASH);
+  });
+
+  it("the panel may frame same-origin pages only", () => {
+    expect(strictCsp("n", PROD)).toContain("default-src 'self'");
+    expect(strictCsp("n", PROD)).not.toContain("frame-src");
+  });
+});
+
 describe("routing", () => {
   const publicSource: RegExp = pathToRegexp(PUBLIC_CSP_SOURCE, [], { strict: true, sensitive: false, delimiter: "/" });
 
   it("public source skips strict areas, by whole segment", () => {
-    for (const path of ["/dashboard", "/dashboard/collections", "/login", "/g/abc"]) expect(publicSource.test(path)).toBe(false);
+    for (const path of ["/dashboard", "/dashboard/collections", "/login", "/g/abc", `${LIGHTCRAFT_BASE}/index.html`]) expect(publicSource.test(path)).toBe(false);
     for (const path of ["/", "/portfolio", "/gallery", "/loginx"]) expect(publicSource.test(path)).toBe(true);
   });
 

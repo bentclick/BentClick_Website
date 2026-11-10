@@ -349,6 +349,7 @@ Photographer branding in client galleries (logo, accent, font pair from a curate
 | 14 | Portfolio views: album pages (`/portfolio/[slug]`), albums or mosaic view, featured photos on the homepage, album ordering in the dashboard | done |
 | 15 | RAW previews from the embedded JPEG (collections and portfolio) and Content-Security-Policy (`lib/security/csp.ts`, nonce in `proxy.ts`, `/api/csp-report`) | done |
 | 16 | Edited version of a photo: clients see and download it, the original stays intact (`services/photos/photo-edit.service.ts`, `lib/images/photo-source.ts`) | done |
+| 17 | RAW editor in the dashboard: our LightCraft web build (official tag + patches in `vendor/lightcraft`) in a same-origin frame (`public/lightcraft`, `components/admin/develop`, `lightcraftCsp`) | done |
 | 13 | Photographer portrait (About + home), contact form → leads ("Contatos" in the dashboard, convert to client, e-mail notification) | done |
 
 Public pages use ISR (`revalidate = 600`) and therefore read the database at build time.

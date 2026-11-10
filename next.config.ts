@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { cspHeaderName, PUBLIC_CSP_SOURCE, publicCsp } from "./src/lib/security/csp";
+import { cspHeaderName, lightcraftCsp, PUBLIC_CSP_SOURCE, publicCsp } from "./src/lib/security/csp";
 
 const nextConfig: NextConfig = {
   // Native argon2 binding must not be bundled.
@@ -24,6 +24,16 @@ const nextConfig: NextConfig = {
         ],
       },
       { source: PUBLIC_CSP_SOURCE, headers: [{ key: cspHeaderName(), value: publicCsp() }] },
+      // Only these files may be framed, and only by our own panel. Last match wins over DENY above.
+      {
+        source: "/lightcraft/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: cspHeaderName(), value: lightcraftCsp() },
+          // File names don't change between builds of a version.
+          { key: "Cache-Control", value: "no-cache" },
+        ],
+      },
     ];
   },
 };

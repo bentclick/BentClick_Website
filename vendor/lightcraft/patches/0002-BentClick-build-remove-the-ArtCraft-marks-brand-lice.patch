@@ -1,0 +1,572 @@
+From 713be07ab5afcf16e1ff0b44fd85a0afd26244ad Mon Sep 17 00:00:00 2001
+From: bentclick <338634745+bentclick@users.noreply.github.com>
+Date: Tue, 10 Nov 2026 07:33:06 -0300
+Subject: [PATCH 2/2] BentClick build: remove the ArtCraft marks (brand licence
+ for modified versions)
+
+Drops the ArtCraft Discord and website entries from the Help menu, the command list, the top bar and the About dialog, and their translations. The About dialog says, in plain text, that this build is based on LightCraft by the ArtCraft team.
+---
+ crates/ui-egui/locales/cs.json          |  5 -----
+ crates/ui-egui/locales/de.json          |  5 -----
+ crates/ui-egui/locales/es.json          |  5 -----
+ crates/ui-egui/locales/fi.json          |  5 -----
+ crates/ui-egui/locales/fr.json          |  5 -----
+ crates/ui-egui/locales/id.json          |  5 -----
+ crates/ui-egui/locales/it.json          |  5 -----
+ crates/ui-egui/locales/ja.json          |  5 -----
+ crates/ui-egui/locales/ka.json          |  5 -----
+ crates/ui-egui/locales/pl.json          |  5 -----
+ crates/ui-egui/locales/pt-br.json       |  5 -----
+ crates/ui-egui/locales/ru.json          |  5 -----
+ crates/ui-egui/locales/sv.json          |  5 -----
+ crates/ui-egui/locales/uk.json          |  5 -----
+ crates/ui-egui/locales/vi.json          |  5 -----
+ crates/ui-egui/locales/zh-hans.json     |  5 -----
+ crates/ui-egui/locales/zh-hant.json     |  5 -----
+ crates/ui-egui/src/dialogs.rs           | 19 +++----------------
+ crates/ui-egui/src/links.rs             |  4 ----
+ crates/ui-egui/src/menus/menubar.rs     |  2 --
+ crates/ui-egui/src/menus/run.rs         |  2 +-
+ crates/ui-egui/src/menus/ui_commands.rs |  2 --
+ crates/ui-egui/src/panels/topbar.rs     |  1 -
+ 23 files changed, 4 insertions(+), 111 deletions(-)
+
+diff --git a/crates/ui-egui/locales/cs.json b/crates/ui-egui/locales/cs.json
+index ea1021921..3b6a9b0a0 100644
+--- a/crates/ui-egui/locales/cs.json
++++ b/crates/ui-egui/locales/cs.json
+@@ -219,8 +219,6 @@
+   "Aqua Luminance": "Jas tyrkysové",
+   "Aqua Saturation": "Sytost tyrkysové",
+   "Arrange Panel": "Uspořádat panel",
+-  "ArtCraft Website": "Web ArtCraft",
+-  "ArtCraft — more creative apps": "ArtCraft — další kreativní aplikace",
+   "As Shot": "Podle snímku",
+   "As shot": "Podle pořízení",
+   "Ascending": "Vzestupně",
+@@ -959,9 +957,6 @@
+   "Web / Portfolio": "Web / portfolio",
+   "Full Resolution Master": "Master v plném rozlišení",
+   "JPEG (Small)": "JPEG (malý)",
+-  "Join the ArtCraft Discord": "Připojit se k Discordu ArtCraft",
+-  "Join the ArtCraft Discord…": "Připojit se k Discordu ArtCraft…",
+-  "Join the ArtCraft community on Discord": "Připojit se ke komunitě ArtCraft na Discordu",
+   "Keep in Local": "Ponechat v místních souborech",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Uložte je na disk s dostatkem místa: inteligentní náhledy zabírají přibližně 1 MB na fotografii. Mezipaměť miniatur zůstává v knihovně.",
+   "Keyboard Shortcuts": "Klávesové zkratky",
+diff --git a/crates/ui-egui/locales/de.json b/crates/ui-egui/locales/de.json
+index bc67606eb..dff4a95f8 100644
+--- a/crates/ui-egui/locales/de.json
++++ b/crates/ui-egui/locales/de.json
+@@ -102,8 +102,6 @@
+   "Aqua Luminance": "Aquamarin – Luminanz",
+   "Aqua Saturation": "Aquamarin – Sättigung",
+   "Arrange Panel": "Bedienfeld anordnen",
+-  "ArtCraft Website": "ArtCraft-Website",
+-  "ArtCraft — more creative apps": "ArtCraft – weitere Kreativ-Apps",
+   "As Shot": "Wie Aufnahme",
+   "As shot": "Wie Aufnahme",
+   "Ascending": "Aufsteigend",
+@@ -760,9 +758,6 @@
+   "Full Resolution Master": "Master in voller Auflösung",
+   "JPEG (Small)": "JPEG (klein)",
+   "JPEG with the same name (`IMG_0001.CR3` + `IMG_0001.JPG`) no longer share one sidecar: the raw keeps `IMG_0001.xmp`,": "JPEG mit gleichem Namen (`IMG_0001.CR3` + `IMG_0001.JPG`) keine Begleitdatei mehr: RAW verwendet `IMG_0001.xmp`,",
+-  "Join the ArtCraft Discord": "ArtCraft auf Discord beitreten",
+-  "Join the ArtCraft Discord…": "ArtCraft auf Discord beitreten…",
+-  "Join the ArtCraft community on Discord": "Der ArtCraft-Community auf Discord beitreten",
+   "Keep in Local": "In „Lokal“ behalten",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Wähle ein Laufwerk mit genügend Platz: Smart-Vorschauen benötigen etwa 1 MB pro Foto. Der Miniaturbild-Cache bleibt in der Bibliothek.",
+   "Keyboard Shortcuts": "Tastenkürzel",
+diff --git a/crates/ui-egui/locales/es.json b/crates/ui-egui/locales/es.json
+index c34057bdf..b9de4f3ab 100644
+--- a/crates/ui-egui/locales/es.json
++++ b/crates/ui-egui/locales/es.json
+@@ -87,8 +87,6 @@
+   "Aqua Luminance": "Luminancia aguamarina",
+   "Aqua Saturation": "Saturación aguamarina",
+   "Arrange Panel": "Organizar panel",
+-  "ArtCraft Website": "Sitio web de ArtCraft",
+-  "ArtCraft — more creative apps": "ArtCraft: más aplicaciones creativas",
+   "As Shot": "Como se tomó",
+   "As shot": "Como se tomó",
+   "Ascending": "Ascendente",
+@@ -761,9 +759,6 @@
+   "Web / Portfolio": "Web / Portfolio",
+   "Full Resolution Master": "Máster a resolución completa",
+   "JPEG (Small)": "JPEG (pequeño)",
+-  "Join the ArtCraft Discord": "Unirse al Discord de ArtCraft",
+-  "Join the ArtCraft Discord…": "Unirse al Discord de ArtCraft…",
+-  "Join the ArtCraft community on Discord": "Unirse a la comunidad de ArtCraft en Discord",
+   "Keep in Local": "Conservar en Local",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Conviene un disco con espacio: las vistas previas inteligentes ocupan aproximadamente 1 MB por foto. La caché de miniaturas permanece en la biblioteca.",
+   "Keyboard Shortcuts": "Métodos abreviados de teclado",
+diff --git a/crates/ui-egui/locales/fi.json b/crates/ui-egui/locales/fi.json
+index 59cc611cd..ccc60f5fa 100644
+--- a/crates/ui-egui/locales/fi.json
++++ b/crates/ui-egui/locales/fi.json
+@@ -129,8 +129,6 @@
+   "Aqua Luminance": "Turkoosin kirkkaus",
+   "Aqua Saturation": "Turkoosin värikylläisyys",
+   "Arrange Panel": "Järjestä paneeli",
+-  "ArtCraft Website": "ArtCraftin verkkosivusto",
+-  "ArtCraft — more creative apps": "ArtCraft — lisää luovia sovelluksia",
+   "As Shot": "Kuvattaessa",
+   "Ascending": "Nouseva",
+   "Aspect": "Kuvasuhde",
+@@ -972,9 +970,6 @@
+   "Web / Portfolio": "Web / Portfolio",
+   "Full Resolution Master": "Täysresoluutioinen masteri",
+   "JPEG (Small)": "JPEG (pieni)",
+-  "Join the ArtCraft Discord": "Liity ArtCraftin Discordiin",
+-  "Join the ArtCraft Discord…": "Liity ArtCraftin Discordiin…",
+-  "Join the ArtCraft community on Discord": "Liity ArtCraft-yhteisöön Discordissa",
+   "Keep in Local": "Säilytä Paikallisessa",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Pidä se asemalla, jolla on tilaa: älyesikatselut vievät noin 1 Mt kuvaa kohden. Pikkukuvien välimuisti pysyy kirjastossa.",
+   "Keyboard Shortcuts": "Pikanäppäimet",
+diff --git a/crates/ui-egui/locales/fr.json b/crates/ui-egui/locales/fr.json
+index 31e6814b6..7b366393a 100644
+--- a/crates/ui-egui/locales/fr.json
++++ b/crates/ui-egui/locales/fr.json
+@@ -86,8 +86,6 @@
+   "Aqua Hue": "Teinte turquoise",
+   "Aqua Luminance": "Luminance turquoise",
+   "Aqua Saturation": "Saturation turquoise",
+-  "ArtCraft Website": "Site web d'ArtCraft",
+-  "ArtCraft — more creative apps": "ArtCraft : d'autres applications créatives",
+   "As Shot": "Tel quel",
+   "As shot": "Tel quel",
+   "Ascending": "Croissant",
+@@ -720,9 +718,6 @@
+   "Web / Portfolio": "Web / Portfolio",
+   "Full Resolution Master": "Master pleine résolution",
+   "JPEG (Small)": "JPEG (petit)",
+-  "Join the ArtCraft Discord": "Rejoindre le Discord d'ArtCraft",
+-  "Join the ArtCraft Discord…": "Rejoindre le Discord d'ArtCraft…",
+-  "Join the ArtCraft community on Discord": "Rejoindre la communauté ArtCraft sur Discord",
+   "Keep in Local": "Conserver dans Local",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Choisissez un disque avec de la place : les aperçus dynamiques font environ 1 Mo par photo. Le cache des miniatures reste dans la bibliothèque.",
+   "Keyboard Shortcuts": "Raccourcis clavier",
+diff --git a/crates/ui-egui/locales/id.json b/crates/ui-egui/locales/id.json
+index 52705328c..ac93d1945 100644
+--- a/crates/ui-egui/locales/id.json
++++ b/crates/ui-egui/locales/id.json
+@@ -131,8 +131,6 @@
+   "Aqua Saturation": "Saturasi aqua",
+   "Arrange Panel": "Atur panel",
+   "Arrange Print Cell": "Atur susunan sel cetak",
+-  "ArtCraft Website": "Situs web ArtCraft",
+-  "ArtCraft — more creative apps": "ArtCraft — aplikasi kreatif lainnya",
+   "As Shot": "Sesuai pemotretan",
+   "As shot": "Sesuai pemotretan",
+   "Ascending": "Naik",
+@@ -977,9 +975,6 @@
+   "Web / Portfolio": "Web / Portofolio",
+   "Full Resolution Master": "Master Resolusi Penuh",
+   "JPEG (Small)": "JPEG (kecil)",
+-  "Join the ArtCraft Discord": "Gabung ke Discord ArtCraft",
+-  "Join the ArtCraft Discord…": "Gabung ke Discord ArtCraft…",
+-  "Join the ArtCraft community on Discord": "Bergabung dengan komunitas ArtCraft di Discord",
+   "Keep in Local": "Simpan di Lokal",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Simpan di drive yang ruangnya cukup: ukuran pratinjau pintar sekitar 1 MB per foto. Cache thumbnail tetap di pustaka.",
+   "Keyboard Shortcuts": "Pintasan keyboard",
+diff --git a/crates/ui-egui/locales/it.json b/crates/ui-egui/locales/it.json
+index 5b0ccc0ce..50b371af9 100644
+--- a/crates/ui-egui/locales/it.json
++++ b/crates/ui-egui/locales/it.json
+@@ -87,8 +87,6 @@
+   "Aqua Luminance": "Luminanza acqua",
+   "Aqua Saturation": "Saturazione acqua",
+   "Arrange Panel": "Disponi il pannello",
+-  "ArtCraft Website": "Sito web di ArtCraft",
+-  "ArtCraft — more creative apps": "ArtCraft: altre app creative",
+   "As Shot": "Come scattata",
+   "As shot": "Come scattata",
+   "Ascending": "Crescente",
+@@ -721,9 +719,6 @@
+   "Web / Portfolio": "Web / Portfolio",
+   "Full Resolution Master": "Master a piena risoluzione",
+   "JPEG (Small)": "JPEG (piccolo)",
+-  "Join the ArtCraft Discord": "Unisciti al Discord di ArtCraft",
+-  "Join the ArtCraft Discord…": "Unisciti al Discord di ArtCraft…",
+-  "Join the ArtCraft community on Discord": "Unisciti alla community di ArtCraft su Discord",
+   "Keep in Local": "Tieni in Locale",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Tienila su un disco con spazio libero: le anteprime avanzate occupano circa 1 MB per foto. La cache delle miniature resta nella libreria.",
+   "Keyboard Shortcuts": "Scorciatoie da tastiera",
+diff --git a/crates/ui-egui/locales/ja.json b/crates/ui-egui/locales/ja.json
+index 97c15dd01..5fb3c3373 100644
+--- a/crates/ui-egui/locales/ja.json
++++ b/crates/ui-egui/locales/ja.json
+@@ -89,8 +89,6 @@
+   "Aqua Luminance": "アクアの輝度",
+   "Aqua Saturation": "アクアの彩度",
+   "Arrange Panel": "パネルを配置",
+-  "ArtCraft Website": "ArtCraftのウェブサイト",
+-  "ArtCraft — more creative apps": "ArtCraft — その他のクリエイティブアプリ",
+   "As Shot": "撮影時の設定",
+   "As shot": "撮影時の設定",
+   "Ascending": "昇順",
+@@ -569,9 +567,6 @@
+   "Web / Portfolio": "ウェブ / ポートフォリオ",
+   "Full Resolution Master": "フル解像度マスター",
+   "JPEG (Small)": "JPEG（小）",
+-  "Join the ArtCraft Discord": "ArtCraftのDiscordに参加",
+-  "Join the ArtCraft Discord…": "ArtCraftのDiscordに参加…",
+-  "Join the ArtCraft community on Discord": "DiscordのArtCraftコミュニティに参加",
+   "Keywords (K)": "キーワード（K）",
+   "Label": "ラベル",
+   "Label Set": "ラベルセット",
+diff --git a/crates/ui-egui/locales/ka.json b/crates/ui-egui/locales/ka.json
+index 30769b60f..6d088c09d 100644
+--- a/crates/ui-egui/locales/ka.json
++++ b/crates/ui-egui/locales/ka.json
+@@ -190,8 +190,6 @@
+   "Arabic names and other Arabic text in headings, chosen tabs and other bold places are now drawn bold, as Latin text": "არაბული სახელები და სხვა არაბული ტექსტი სათაურებში, არჩეულ ჩანართებსა და სხვა მუქ ადგილებში ახლა მუქად იხატება, როგორც მათ გვერდით",
+   "Arrange Panel": "პანელის დალაგება",
+   "Arrange the left sidebar your way: drag Albums, Local, By Date, Folders or Keywords by its header to move it (a line": "დაალაგეთ მარცხენა გვერდითი ზოლი თქვენებურად: გადაათრიეთ ალბომები, ლოკალური, თარიღის მიხედვით, საქაღალდეები ან საკვანძო სიტყვები სათაურით (ხაზი",
+-  "ArtCraft Website": "ArtCraft-ის ვებსაიტი",
+-  "ArtCraft — more creative apps": "ArtCraft — სხვა შემოქმედებითი აპლიკაციები",
+   "As Shot": "როგორც გადაღებულია",
+   "As shot": "როგორც გადაღებულია",
+   "Ascending": "ზრდადობით",
+@@ -1053,9 +1051,6 @@
+   "JPEG XL compressed DNGs (DNG 1.7) now open: lossless tiles decode sample for sample (checked on synthetic files);": "JPEG XL-ით შეკუმშული DNG-ები (DNG 1.7) ახლა იხსნება: უდანაკარგო ფილები ნიმუშ-ნიმუშ დეკოდირდება (შემოწმებულია სინთეზურ ფაილებზე);",
+   "JPEG XL export": "JPEG XL ექსპორტი",
+   "JPEG with the same name (`IMG_0001.CR3` + `IMG_0001.JPG`) no longer share one sidecar: the raw keeps `IMG_0001.xmp`,": "JPEG იმავე სახელით (`IMG_0001.CR3` + `IMG_0001.JPG`) აღარ იზიარებს ერთ თანმხლებ ფაილს: RAW ინარჩუნებს `IMG_0001.xmp`-ს,",
+-  "Join the ArtCraft Discord": "შემოუერთდით ArtCraft-ის Discord-ს",
+-  "Join the ArtCraft Discord…": "შემოუერთდით ArtCraft-ის Discord-ს…",
+-  "Join the ArtCraft community on Discord": "შემოუერთდით ArtCraft-ის საზოგადოებას Discord-ზე",
+   "Keep in Local": "ლოკალურში დატოვება",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "შეინახეთ თავისუფალი ადგილის მქონე დისკზე: ჭკვიანი წინასწარი ხედი დაახლოებით 1 MB-ია თითო ფოტოზე. ესკიზების ქეში ბიბლიოთეკაში რჩება.",
+   "Kelvin white balance for more Sony cameras": "თეთრის ბალანსი კელვინებში მეტი Sony კამერისთვის",
+diff --git a/crates/ui-egui/locales/pl.json b/crates/ui-egui/locales/pl.json
+index dbc29a194..25415cec0 100644
+--- a/crates/ui-egui/locales/pl.json
++++ b/crates/ui-egui/locales/pl.json
+@@ -80,8 +80,6 @@
+   "Aqua Luminance": "Jasność turkusowego",
+   "Aqua Saturation": "Nasycenie turkusowego",
+   "Arrange Panel": "Rozmieść panel",
+-  "ArtCraft Website": "Witryna ArtCraft",
+-  "ArtCraft — more creative apps": "ArtCraft — więcej aplikacji kreatywnych",
+   "As Shot": "Jak na zdjęciu",
+   "As shot": "Jak zrobiono zdjęcie",
+   "Ascending": "Rosnąco",
+@@ -703,9 +701,6 @@
+   "Web / Portfolio": "Web / portfolio",
+   "Full Resolution Master": "Master w pełnej rozdzielczości",
+   "JPEG (Small)": "JPEG (mały)",
+-  "Join the ArtCraft Discord": "Dołącz do Discorda ArtCraft",
+-  "Join the ArtCraft Discord…": "Dołącz do Discorda ArtCraft…",
+-  "Join the ArtCraft community on Discord": "Dołącz do społeczności ArtCraft na Discordzie",
+   "Keep in Local": "Zachowaj w lokalnych",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Przechowuj ją na dysku z wolnym miejscem: podglądy inteligentne zajmują około 1 MB na zdjęcie. Pamięć podręczna miniatur pozostaje w bibliotece.",
+   "Keyboard Shortcuts": "Skróty klawiaturowe",
+diff --git a/crates/ui-egui/locales/pt-br.json b/crates/ui-egui/locales/pt-br.json
+index 3aedd8290..b773afab2 100644
+--- a/crates/ui-egui/locales/pt-br.json
++++ b/crates/ui-egui/locales/pt-br.json
+@@ -92,8 +92,6 @@
+   "Aqua Luminance": "Luminância do ciano",
+   "Aqua Saturation": "Saturação do ciano",
+   "Arrange Panel": "Organizar painel",
+-  "ArtCraft Website": "Site do ArtCraft",
+-  "ArtCraft — more creative apps": "ArtCraft — mais aplicativos criativos",
+   "As Shot": "Como capturado",
+   "As shot": "Como capturado",
+   "Ascending": "Crescente",
+@@ -729,9 +727,6 @@
+   "Web / Portfolio": "Web / Portfólio",
+   "Full Resolution Master": "Master em resolução total",
+   "JPEG (Small)": "JPEG (pequeno)",
+-  "Join the ArtCraft Discord": "Entrar no Discord do ArtCraft",
+-  "Join the ArtCraft Discord…": "Entrar no Discord do ArtCraft…",
+-  "Join the ArtCraft community on Discord": "Participe da comunidade ArtCraft no Discord",
+   "Keep in Local": "Manter em Local",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Guarde em um disco com espaço: as pré-visualizações inteligentes ocupam cerca de 1 MB por foto. O cache de miniaturas permanece na biblioteca.",
+   "Keyboard Shortcuts": "Atalhos de teclado",
+diff --git a/crates/ui-egui/locales/ru.json b/crates/ui-egui/locales/ru.json
+index b3df02470..ad1d6bff2 100644
+--- a/crates/ui-egui/locales/ru.json
++++ b/crates/ui-egui/locales/ru.json
+@@ -259,8 +259,6 @@
+   "Aqua Luminance": "Яркость голубого",
+   "Aqua Saturation": "Насыщенность голубого",
+   "Arrange Panel": "Расположить панель",
+-  "ArtCraft Website": "Сайт ArtCraft",
+-  "ArtCraft — more creative apps": "ArtCraft — другие творческие приложения",
+   "As Shot": "Как снято",
+   "As shot": "Как снято",
+   "Ascending": "По возрастанию",
+@@ -799,8 +797,6 @@
+   "Web / Portfolio": "Веб / портфолио",
+   "Full Resolution Master": "Мастер в полном разрешении",
+   "JPEG (Small)": "JPEG (малый)",
+-  "Join the ArtCraft Discord": "Присоединяйтесь к Discord ArtCraft",
+-  "Join the ArtCraft Discord…": "Присоединиться к Discord ArtCraft…",
+   "Keep in Local": "Оставить в «Локальном»",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Храните их на диске со свободным местом: смарт-просмотр занимает около 1 МБ на фото. Кэш миниатюр остаётся в библиотеке.",
+   "Keyboard Shortcuts": "Сочетания клавиш",
+@@ -2109,7 +2105,6 @@
+   "Install Face Model": "Установить модель лиц",
+   "Invert Component": "Инвертировать компонент",
+   "JPEG with the same name (`IMG_0001.CR3` + `IMG_0001.JPG`) no longer share one sidecar: the raw keeps `IMG_0001.xmp`,": "JPEG с таким же именем (`IMG_0001.CR3` + `IMG_0001.JPG`) больше не используют общий XMP-файл: RAW сохраняет `IMG_0001.xmp`,",
+-  "Join the ArtCraft community on Discord": "Присоединяйтесь к сообществу ArtCraft в Discord",
+   "Label": "Метка",
+   "Label Set": "Набор меток",
+   "Last GPU fallback": "Последний откат с GPU",
+diff --git a/crates/ui-egui/locales/sv.json b/crates/ui-egui/locales/sv.json
+index 94b9e3033..b164b2aa1 100644
+--- a/crates/ui-egui/locales/sv.json
++++ b/crates/ui-egui/locales/sv.json
+@@ -155,8 +155,6 @@
+   "are empty": "är tomma",
+   "aren't empty": "är inte tomma",
+   "Arrange Panel": "Panelen Ordna",
+-  "ArtCraft Website": "ArtCrafts webbplats",
+-  "ArtCraft — more creative apps": "ArtCraft — fler kreativa appar",
+   "as `<name>.corrupt-<time>` and you're told; one that can't be read (e.g. locked by another program) is left alone": "som `<name>.corrupt-<time>` och du får veta det; en som inte kan läsas (t.ex. låst av ett annat program) lämnas orörd",
+   "As Shot": "Som tagen",
+   "As shot": "Som tagen",
+@@ -1060,9 +1058,6 @@
+   "It tests this album, so testing it back would loop": "Det testar det här albumet, så att testa det tillbaka skulle ge en loop",
+   "Its denoised picture is not made yet, and pictures are not made on their own (Settings, AI Denoise).": "Den brusreducerade bilden har inte skapats än, och bilder skapas inte automatiskt (Inställningar, AI-brusreducering).",
+   "its photos and XMP sidecars, and the photos point at it again. If something now occupies the old place, the undo": "dess foton och XMP-sidofiler, och fotona pekar på den igen. Om något nu upptar den gamla platsen, så",
+-  "Join the ArtCraft community on Discord": "Gå med i ArtCrafts community på Discord",
+-  "Join the ArtCraft Discord": "Gå med i ArtCraft på Discord",
+-  "Join the ArtCraft Discord…": "Gå med i ArtCraft på Discord…",
+   "JPEG (Large)": "JPEG (stor)",
+   "Instagram Feed": "Instagram-flöde",
+   "Instagram Story / Reel": "Instagram-story / Reel",
+diff --git a/crates/ui-egui/locales/uk.json b/crates/ui-egui/locales/uk.json
+index 09b78fab1..8c3edb73d 100644
+--- a/crates/ui-egui/locales/uk.json
++++ b/crates/ui-egui/locales/uk.json
+@@ -11,7 +11,6 @@
+   "Aperture": "Діафрагма",
+   "Apply": "Застосувати",
+   "Aqua": "Бірюзовий",
+-  "ArtCraft Website": "Вебсайт ArtCraft",
+   "Aspect Ratio": "Співвідношення сторін",
+   "Auto": "Авто",
+   "Automatic": "Автоматично",
+@@ -113,8 +112,6 @@
+   "ISO Speed": "Чутливість ISO",
+   "Import photos with File → Import Photos…, or drop them here": "Імпортуйте фото через Файл → Імпортувати фото… або перетягніть їх сюди",
+   "Imported": "Імпортовані",
+-  "Join the ArtCraft Discord": "Приєднатися до Discord ArtCraft",
+-  "Join the ArtCraft Discord…": "Приєднатися до Discord ArtCraft…",
+   "Label": "Мітка",
+   "Last commit": "Останній коміт",
+   "Lens Blur": "Розмиття об’єктива",
+@@ -434,7 +431,6 @@
+   "Aqua Hue": "Тон бірюзового",
+   "Aqua Luminance": "Яскравість бірюзового",
+   "Aqua Saturation": "Насиченість бірюзового",
+-  "ArtCraft — more creative apps": "ArtCraft — інші творчі застосунки",
+   "As Shot": "Як під час знімання",
+   "As shot": "Як під час знімання",
+   "Ascending": "За зростанням",
+@@ -811,7 +807,6 @@
+   "Web / Portfolio": "Веб / портфоліо",
+   "Full Resolution Master": "Майстер у повній роздільності",
+   "JPEG (Small)": "JPEG (малий)",
+-  "Join the ArtCraft community on Discord": "Приєднатися до спільноти ArtCraft у Discord",
+   "Keywords (K)": "Ключові слова (K)",
+   "Label Set": "Набір міток",
+   "Last GPU fallback": "Останній перехід із ГП",
+diff --git a/crates/ui-egui/locales/vi.json b/crates/ui-egui/locales/vi.json
+index af27e9aa0..b088d3eff 100644
+--- a/crates/ui-egui/locales/vi.json
++++ b/crates/ui-egui/locales/vi.json
+@@ -125,8 +125,6 @@
+   "Aqua Luminance": "Độ sáng ngọc lam",
+   "Aqua Saturation": "Độ bão hòa ngọc lam",
+   "Arrange Panel": "Sắp xếp bảng",
+-  "ArtCraft Website": "Trang web ArtCraft",
+-  "ArtCraft — more creative apps": "ArtCraft — thêm ứng dụng sáng tạo",
+   "As Shot": "Như khi chụp",
+   "As shot": "Như khi chụp",
+   "Ascending": "Tăng dần",
+@@ -895,9 +893,6 @@
+   "Full Resolution Master": "Master độ phân giải đầy đủ",
+   "JPEG (Small)": "JPEG (Nhỏ)",
+   "JPEG with the same name (`IMG_0001.CR3` + `IMG_0001.JPG`) no longer share one sidecar: the raw keeps `IMG_0001.xmp`,": "JPEG cùng tên (`IMG_0001.CR3` + `IMG_0001.JPG`) không còn dùng chung một sidecar: raw giữ `IMG_0001.xmp`,",
+-  "Join the ArtCraft Discord": "Tham gia Discord ArtCraft",
+-  "Join the ArtCraft Discord…": "Tham gia Discord ArtCraft…",
+-  "Join the ArtCraft community on Discord": "Tham gia cộng đồng ArtCraft trên Discord",
+   "Keep in Local": "Giữ trong Local",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "Giữ trên ổ còn dung lượng: xem trước thông minh khoảng 1 MB mỗi ảnh. Bộ nhớ đệm thumbnail nằm trong thư viện.",
+   "Keyboard Shortcuts": "Phím tắt",
+diff --git a/crates/ui-egui/locales/zh-hans.json b/crates/ui-egui/locales/zh-hans.json
+index ca13d782a..21320774f 100644
+--- a/crates/ui-egui/locales/zh-hans.json
++++ b/crates/ui-egui/locales/zh-hans.json
+@@ -91,8 +91,6 @@
+   "Aqua Luminance": "青色明度",
+   "Aqua Saturation": "青色饱和度",
+   "Arrange Panel": "排列面板",
+-  "ArtCraft Website": "ArtCraft 网站",
+-  "ArtCraft — more creative apps": "ArtCraft — 更多创意应用",
+   "As Shot": "拍摄时设置",
+   "As shot": "拍摄时设置",
+   "Ascending": "升序",
+@@ -561,7 +559,6 @@
+   "Inspect Lightroom Catalog": "检查 Lightroom 目录",
+   "Inspecting Lightroom Catalog": "正在检查 Lightroom 目录",
+   "Invert Component": "反相组件",
+-  "Join the ArtCraft community on Discord": "加入 Discord 上的 ArtCraft 社区",
+   "Label": "标签",
+   "Label Set": "标签集",
+   "Last GPU fallback": "最近一次 GPU 回退",
+@@ -837,8 +834,6 @@
+   "Web / Portfolio": "网页 / 作品集",
+   "Full Resolution Master": "全分辨率母版",
+   "JPEG (Small)": "JPEG（小）",
+-  "Join the ArtCraft Discord": "加入 ArtCraft Discord",
+-  "Join the ArtCraft Discord…": "加入 ArtCraft Discord…",
+   "Keep in Local": "保留在本地",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "请选择空间充足的驱动器：智能预览每张照片约 1 MB。缩略图缓存仍保留在图库中。",
+   "Keyboard Shortcuts": "键盘快捷键",
+diff --git a/crates/ui-egui/locales/zh-hant.json b/crates/ui-egui/locales/zh-hant.json
+index f3dfc422e..89a2246b4 100644
+--- a/crates/ui-egui/locales/zh-hant.json
++++ b/crates/ui-egui/locales/zh-hant.json
+@@ -91,8 +91,6 @@
+   "Aqua Luminance": "青色明度",
+   "Aqua Saturation": "青色飽和度",
+   "Arrange Panel": "排列面板",
+-  "ArtCraft Website": "ArtCraft 網站",
+-  "ArtCraft — more creative apps": "ArtCraft — 更多創作應用程式",
+   "As Shot": "拍攝時設定",
+   "As shot": "拍攝時設定",
+   "Ascending": "遞增",
+@@ -562,7 +560,6 @@
+   "Inspect Lightroom Catalog": "檢查 Lightroom 目錄",
+   "Inspecting Lightroom Catalog": "正在檢查 Lightroom 目錄",
+   "Invert Component": "反轉元件",
+-  "Join the ArtCraft community on Discord": "加入 Discord 上的 ArtCraft 社群",
+   "Label": "標籤",
+   "Label Set": "標籤集",
+   "Last GPU fallback": "最近一次 GPU 備援",
+@@ -838,8 +835,6 @@
+   "Web / Portfolio": "網頁 / 作品集",
+   "Full Resolution Master": "全解析度母版",
+   "JPEG (Small)": "JPEG（小尺寸）",
+-  "Join the ArtCraft Discord": "加入 ArtCraft Discord",
+-  "Join the ArtCraft Discord…": "加入 ArtCraft Discord…",
+   "Keep in Local": "保留在本機",
+   "Keep it on a drive with room: smart previews are about 1 MB per photo. The thumbnail cache stays in the library.": "請放在空間充足的磁碟：每張智慧型預覽約 1 MB。縮圖快取仍保留在照片庫中。",
+   "Keyboard Shortcuts": "鍵盤快速鍵",
+diff --git a/crates/ui-egui/src/dialogs.rs b/crates/ui-egui/src/dialogs.rs
+index 91d9dd261..1ddf5bc47 100644
+--- a/crates/ui-egui/src/dialogs.rs
++++ b/crates/ui-egui/src/dialogs.rs
+@@ -2048,23 +2048,10 @@ fn about_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut
+                 "MIT OR Apache-2.0. Fonts: {} (OFL). Icons: original.",
+                 crate::theme::font_credits(app.chinese_font.is_some())
+             ));
+-            ui.add_space(10.0);
+-            let r = crate::button::Button::new("Join the ArtCraft Discord")
+-                .primary()
+-                .large()
+-                .min_width(260.0)
+-                .widget("button:aboutDiscord")
+-                .tooltip(crate::links::DISCORD)
+-                .show(ui);
+-            if r.clicked() {
+-                let _ = crate::links::open(app, crate::links::DISCORD);
+-            }
++            // modified build: the ArtCraft marks are removed, as the brand licence requires
++            ui.label("Versão modificada usada pelo BentClick, baseada no LightCraft do time ArtCraft.");
+             ui.add_space(6.0);
+-            for (label, url) in [
+-                ("LightCraft website", crate::links::APP_PAGE),
+-                ("Source code on GitHub", crate::links::GITHUB),
+-                ("ArtCraft — more creative apps", crate::links::WEBSITE),
+-            ] {
++            for (label, url) in [("Source code on GitHub", crate::links::GITHUB)] {
+                 let r = ui.link(crate::i18n::tr(label)).on_hover_text(url);
+                 if r.clicked() {
+                     let _ = crate::links::open(app, url);
+diff --git a/crates/ui-egui/src/links.rs b/crates/ui-egui/src/links.rs
+index 151fac954..c3788c8e1 100644
+--- a/crates/ui-egui/src/links.rs
++++ b/crates/ui-egui/src/links.rs
+@@ -2,8 +2,6 @@
+ 
+ /// The app's id in ArtCraft URLs.
+ pub const APP: &str = "lightcraft";
+-/// The ArtCraft community Discord.
+-pub const DISCORD: &str = "https://discord.gg/artcraft";
+ /// The ArtCraft website.
+ pub const WEBSITE: &str = "https://getartcraft.com";
+ /// This app's page on the ArtCraft website.
+@@ -17,10 +15,8 @@ pub const HELP: &str = "https://github.com/storytold/lightcraft/tree/main/docs";
+ 
+ pub const LINKS: &[(&str, &str, &str)] = &[
+     ("app.help", "LightCraft Help", HELP),
+-    ("app.discord", "Join the ArtCraft Discord…", DISCORD),
+     ("app.website", "LightCraft Website", APP_PAGE),
+     ("app.github", "LightCraft on GitHub", GITHUB),
+-    ("app.artcraft", "ArtCraft Website", WEBSITE),
+     ("app.feedback", "Send Feedback…", FEEDBACK),
+ ];
+ 
+diff --git a/crates/ui-egui/src/menus/menubar.rs b/crates/ui-egui/src/menus/menubar.rs
+index b73729a91..164af09e9 100644
+--- a/crates/ui-egui/src/menus/menubar.rs
++++ b/crates/ui-egui/src/menus/menubar.rs
+@@ -313,12 +313,10 @@ const LAYOUT: &[(&str, &[&str])] = &[
+     (
+         "Help",
+         &[
+-            "app.discord",
+             "app.feedback",
+             "---",
+             "app.website",
+             "app.github",
+-            "app.artcraft",
+             "---",
+             "app.whatsNew",
+             "app.shortcuts",
+diff --git a/crates/ui-egui/src/menus/run.rs b/crates/ui-egui/src/menus/run.rs
+index 9791f0cac..dd8370dd0 100644
+--- a/crates/ui-egui/src/menus/run.rs
++++ b/crates/ui-egui/src/menus/run.rs
+@@ -1485,7 +1485,7 @@ fn ui_commands_12(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Va
+         "app.showInFinder" => show_in_finder(app),
+         "app.showInFolders" => show_in_folders(app, p.get("id").and_then(Value::as_u64).map(lightcraft_catalog::PhotoId)),
+         "app.openLogFolder" => open_log_folder(app),
+-        "app.discord" | "app.website" | "app.github" | "app.artcraft" | "app.help" | "app.feedback" => {
++        "app.website" | "app.github" | "app.help" | "app.feedback" => {
+             let url = crate::links::url_of(id).unwrap_or(crate::links::WEBSITE);
+             crate::links::open(app, url)
+         }
+diff --git a/crates/ui-egui/src/menus/ui_commands.rs b/crates/ui-egui/src/menus/ui_commands.rs
+index f4398d284..26546f2ed 100644
+--- a/crates/ui-egui/src/menus/ui_commands.rs
++++ b/crates/ui-egui/src/menus/ui_commands.rs
+@@ -265,11 +265,9 @@ pub const UI_COMMANDS: &[UiCommand] = &[
+     ("app.whatsNew", "What's New", None, "Help"),
+     ("dialog.cull", "Assisted Culling…", None, "Photo"),
+     ("app.help", "LightCraft Help", Some("F1"), "Help"),
+-    ("app.discord", "Join the ArtCraft Discord…", None, "Help"),
+     ("app.feedback", "Send Feedback…", None, "Help"),
+     ("app.website", "LightCraft Website", None, "Help"),
+     ("app.github", "LightCraft on GitHub", None, "Help"),
+-    ("app.artcraft", "ArtCraft Website", None, "Help"),
+     ("app.shortcuts", "Keyboard Shortcuts", Some("Cmd+/"), "Help"),
+     ("app.setShortcut", "Set Keyboard Shortcut", None, ""),
+     ("app.resetShortcuts", "Reset All Keyboard Shortcuts", None, ""),
+diff --git a/crates/ui-egui/src/panels/topbar.rs b/crates/ui-egui/src/panels/topbar.rs
+index 407fc5f02..09a0b5b48 100644
+--- a/crates/ui-egui/src/panels/topbar.rs
++++ b/crates/ui-egui/src/panels/topbar.rs
+@@ -182,7 +182,6 @@ fn right_icons(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, full: Rec
+         None => crate::i18n::tr("Import Photos…").to_string(),
+     };
+     for (id, icon, tip, cmd) in [
+-        ("discord", Icon::Chat, "Join the ArtCraft community on Discord", "app.discord"),
+         ("cloud", Icon::Cloud, cloud_tip, ""),
+         ("help", Icon::Help, "Keyboard shortcuts", "app.shortcuts"),
+         ("share", Icon::Share, "Export", "dialog.export"),

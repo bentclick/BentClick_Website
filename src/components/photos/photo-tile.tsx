@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertCircle, Check, Download, ImageIcon, ImageUp, Loader2, MoreHorizontal, RotateCcw, Star, Trash2, Undo2 } from "lucide-react";
+import { AlertCircle, Check, Download, ImageIcon, ImageUp, Loader2, MoreHorizontal, RotateCcw, SlidersHorizontal, Star, Trash2, Undo2 } from "lucide-react";
+import Link from "next/link";
 import { memo } from "react";
 import {
   DropdownMenu,
@@ -99,6 +100,13 @@ export const PhotoTile = memo(function PhotoTile({ photo, isCover, selecting, se
                 <Download /> Baixar original
               </a>
             </DropdownMenuItem>
+            {photo.isRaw && photo.status === "READY" ? (
+              <DropdownMenuItem asChild className="max-lg:hidden">
+                <Link href={`/dashboard/revelar/${photo.id}`}>
+                  <SlidersHorizontal /> Revelar no site
+                </Link>
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem disabled={photo.status !== "READY"} onSelect={onReplaceEdited}>
               <ImageUp /> {photo.isEdited ? "Trocar versão editada" : "Enviar versão editada"}
             </DropdownMenuItem>

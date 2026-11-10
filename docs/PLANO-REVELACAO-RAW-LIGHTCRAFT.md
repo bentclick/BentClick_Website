@@ -61,13 +61,19 @@ Vale mesmo que o piloto reprove o LightCraft. Só em coleções de cliente: no p
 
 Camadas: migração `photo_edited_version`, `photo-edit.repository`, `photo-edit.service`, `lib/images/photo-source`, rotas `api/photos/[id]/edit`. `editRecipe` fica para a Fase 3, se o piloto confirmar que os ajustes podem ser guardados.
 
-### Fase 2: editor dentro do painel
+### Fase 2: editor dentro do painel (implementada)
 
-- Arquivos do LightCraft em versão fixada, servidos pelo próprio site, em caminho separado.
-- Tela `dashboard/.../revelar/[photoId]` com o quadro em `?host=parent&store=memory`.
+Os ajustes não são guardados: só a imagem aplicada fica no site.
+
+O LightCraft web oficial (0.19.0 e 0.20.0) trava ao revelar qualquer RAW: um panic de relógio no wasm (issue #4017). Por isso o site usa uma versão compilada por nós, `0.20.0-bentclick.1`, com a correção e sem a marca ArtCraft, como a licença da marca exige. Os patches e o script de compilação ficam em `vendor/lightcraft`. A correção também foi enviada ao projeto: storytold/lightcraft#4031.
+
+- Arquivos da nossa versão em `public/lightcraft/0.20.0-bentclick.1`, com licenças, NOTICE e a licença da fonte; sem a fonte chinesa.
+- Tela `dashboard/revelar/[photoId]` com o quadro em `?host=parent&store=idb`. `store=memory` não serve: nele o RAW nunca é revelado, só a prévia da câmera.
+- A biblioteca do editor fica no IndexedDB `lightcraft` do nosso domínio. A página apaga esse banco ao abrir e ao sair, para os RAWs não se acumularem no navegador. Por isso a tela de boas-vindas do LightCraft aparece a cada sessão.
+- Botão "Aplicar à foto": pede ao editor `app.export` (JPEG em tamanho cheio) e sobe o resultado. A janela Exportar do próprio editor exige preencher "Pasta" na web; recusa exportações de outras fotos da biblioteca (as de demonstração).
 - Ponte em componente próprio: baixa o RAW por link assinado curto, envia com `lightcraft:open`, recebe o resultado e sobe a versão editada por URL assinada, como nos uploads atuais.
 - Avisar antes de sair com edição não salva, usando `lightcraft:dirty`.
-- Ajustes de CSP descritos acima, com teste automático.
+- Política própria para `/lightcraft/*`, sem acesso à rede além dos próprios arquivos e com o script conferido por hash; a página do painel não precisou de mudança no CSP.
 - Liberar somente em computador com Chrome ou Edge.
 
 ### Fase 3: fluxo de trabalho
