@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/http/route-handler";
+import { watermarkStamp } from "@/lib/images/photo-source";
 import { idSchema } from "@/lib/validation/common";
 import { photoPage, resolveGallery } from "@/services/public-gallery/public-gallery.service";
 
@@ -16,7 +17,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ publ
     if (!resolved || resolved.decision.kind !== "GRANTED") {
       return NextResponse.json({ error: "Acesso não permitido." }, { status: 403 });
     }
-    const page = await photoPage(resolved.collection.id, galleryId, cursor);
+    const page = await photoPage(resolved.collection.id, galleryId, watermarkStamp(resolved.collection.watermark), cursor);
     return NextResponse.json(page, { headers: { "cache-control": "private, no-store" } });
   } catch (error) {
     return errorResponse(error);

@@ -83,6 +83,47 @@ describe.skipIf(!run)("public gallery abuse battery", async () => {
     expect(await code(unlockWithPassword(slug, "Praia-Sol-1234!"))).toBe("GALLERY_LOCKED");
   }, 60_000);
 
+  it("counts only wrong passwords toward the lock: the client's right one gives its attempt back (2026-11-11)", async () => {
+    const { slug } = await makeGallery({ passwordHash: await hashGalleryPassword("Praia-Sol-1234!") });
+    for (let i = 0; i < 19; i++) {
+      ctx.ip = randomIp();
+      expect(await code(unlockWithPassword(slug, `wrong-${i}`))).toBe("WRONG_PASSWORD");
+    }
+    for (let i = 0; i < 3; i++) {
+      ctx.ip = randomIp();
+      ctx.jar.clear();
+      expect(await code(unlockWithPassword(slug, "Praia-Sol-1234!"))).toBe("OK");
+    }
+    ctx.ip = randomIp();
+    expect(await code(unlockWithPassword(slug, "wrong-20"))).toBe("WRONG_PASSWORD"); // the 20th wrong one
+    ctx.ip = randomIp();
+    ctx.jar.clear();
+    expect(await code(unlockWithPassword(slug, "Praia-Sol-1234!"))).toBe("GALLERY_LOCKED");
+  }, 60_000);
+
+  it("a ZIP that contains a deleted or re-edited photo stops being handed out at once (2026-11-11)", async () => {
+    const { retireArchivesWithPhotos } = await import("@/services/maintenance/maintenance.service");
+    const { collection, photo } = await makeGallery();
+    const other = await makeGallery(); // control: a ZIP without that photo stays
+    const job = (collectionId: string, photoId: string) =>
+      prisma.downloadJob.create({
+        data: { collectionId, type: "ALL", quality: "HIGH_RES", status: "READY", expiresAt: new Date(Date.now() + 3600_000), parts: { create: [{ index: 0, status: "READY", photoIds: [photoId] }] } },
+      });
+    const hit = await job(collection.id, photo.id);
+    const kept = await job(other.collection.id, other.photo.id);
+    expect(await retireArchivesWithPhotos([photo.id])).toBe(1);
+    expect((await prisma.downloadJob.findUniqueOrThrow({ where: { id: hit.id } })).status).toBe("FAILED");
+    expect((await prisma.downloadJob.findUniqueOrThrow({ where: { id: kept.id } })).status).toBe("READY");
+  });
+
+  it("a parallel burst can't pass the lock's ceiling: the count is one atomic step (2026-11-11)", async () => {
+    const { consumeRateLimitWindow } = await import("@/lib/security/rate-limit");
+    const key = `${tag}-burst`;
+    const results = await Promise.all(Array.from({ length: 40 }, () => consumeRateLimitWindow(key, 20, 60)));
+    expect(results.filter((r) => r.allowed)).toHaveLength(20);
+    await prisma.rateLimitBucket.delete({ where: { key } });
+  });
+
   it("limits new sessions per IP when the visitor drops the cookie (finding 3)", async () => {
     const { slug, photo } = await makeGallery();
     ctx.ip = randomIp();

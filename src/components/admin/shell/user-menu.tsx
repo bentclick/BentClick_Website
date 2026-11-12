@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { clearEditorStorage } from "@/lib/develop/editor-storage";
 import { authClient } from "@/lib/auth/auth-client";
 import { cn } from "@/lib/utils/cn";
 import { initials } from "@/lib/utils/format";
@@ -21,6 +22,7 @@ export function UserMenu({ name, email, title, collapsed = false }: UserMenuProp
   const router = useRouter();
 
   async function signOut() {
+    await clearEditorStorage(); // the editor's copies of client RAWs go with the session
     await authClient.signOut();
     router.replace("/login");
     router.refresh();

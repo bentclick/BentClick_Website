@@ -11,7 +11,7 @@ export async function consumeRateLimit(key: string, limit: number, windowSeconds
 }
 
 /** Same atomic step, also reporting how long until the window frees up (for 429 Retry-After). */
-export async function consumeRateLimitWindow(key: string, limit: number, windowSeconds: number): Promise<{ allowed: boolean; retryAfter: number | null }> {
+export async function consumeRateLimitWindow(key: string, limit: number, windowSeconds: number): Promise<{ allowed: boolean; retryAfter: number | null; count: number }> {
   const rows = await prisma.$queryRaw<{ count: number; resetAt: Date }[]>`
     INSERT INTO "rate_limit_bucket" ("key", "count", "resetAt")
     VALUES (${key}, 1, now() + make_interval(secs => ${windowSeconds}))
@@ -20,8 +20,13 @@ export async function consumeRateLimitWindow(key: string, limit: number, windowS
       "resetAt" = CASE WHEN "rate_limit_bucket"."resetAt" < now() THEN now() + make_interval(secs => ${windowSeconds}) ELSE "rate_limit_bucket"."resetAt" END
     RETURNING "count", "resetAt"`;
   const row = rows[0];
-  if (!row || row.count <= limit) return { allowed: true, retryAfter: null };
-  return { allowed: false, retryAfter: Math.max(1, Math.ceil((row.resetAt.getTime() - Date.now()) / 1000)) };
+  if (!row || row.count <= limit) return { allowed: true, retryAfter: null, count: row?.count ?? 1 };
+  return { allowed: false, retryAfter: Math.max(1, Math.ceil((row.resetAt.getTime() - Date.now()) / 1000)), count: row.count };
+}
+
+/** Gives back one use of the window (an attempt counted up front that turned out to be legitimate). */
+export async function refundRateLimit(key: string): Promise<void> {
+  await prisma.$executeRaw`UPDATE "rate_limit_bucket" SET "count" = GREATEST("count" - 1, 0) WHERE "key" = ${key} AND "resetAt" >= now()`;
 }
 
 /** Read-only check: has this key already used up its window? (Pair with consumeRateLimit on failure.) */

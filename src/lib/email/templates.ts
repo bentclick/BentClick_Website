@@ -67,6 +67,25 @@ ${paragraphs(`${input.clientName} (${input.clientEmail}) escolheu ${input.count}
   return { html, text };
 }
 
+/** Someone tried many wrong passwords on a gallery: the photographer may want a new password or a new link. */
+export function galleryLockedEmail(input: { studio: string; accent: string; title: string; url: string }) {
+  const body = `A galeria recebeu muitas tentativas de senha erradas e foi bloqueada por 1 hora, por segurança.
+
+Se não foi o seu cliente, gere uma nova senha (ou um novo link) em Configurações ▸ Acesso.`;
+  const html = layout(
+    input.studio,
+    input.accent,
+    `<h1 style="margin:0 0 20px;font:400 26px/1.25 Georgia,serif;color:#111111">Senhas erradas em “${esc(input.title)}”</h1>
+${paragraphs(body)}
+<p style="margin:24px 0 0"><a href="${esc(input.url)}" style="display:inline-block;background:ACCENT;color:#fff;text-decoration:none;font:500 12px/1 Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;padding:14px 24px;border-radius:4px">Abrir o acesso</a></p>`,
+  );
+  return { html, text: `Senhas erradas em "${input.title}"
+
+${body}
+
+Abrir o acesso: ${input.url}` };
+}
+
 export function leadReceivedEmail(input: { studio: string; accent: string; name: string; email: string; phone: string | null; event: string | null; message: string; url: string }) {
   const details = [`E-mail: ${input.email}`, input.phone ? `Telefone: ${input.phone}` : null, input.event ? `Evento: ${input.event}` : null].filter(Boolean).join("\n");
   const html = layout(

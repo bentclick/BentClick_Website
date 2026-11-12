@@ -36,7 +36,7 @@ export function listSessionFavoritePhotos(db: Db, clientSessionId: string) {
   return db.photo.findMany({
     where: { status: "READY", favorites: { some: { clientSessionId } } },
     orderBy: [{ gallery: { sortOrder: "asc" } }, { sortOrder: "asc" }],
-    select: { id: true, filename: true, originalFilename: true, editedFilename: true, width: true, height: true, dominantColor: true, thumbnailKey: true, previewKey: true },
+    select: { id: true, filename: true, originalFilename: true, editedFilename: true, width: true, height: true, dominantColor: true, thumbnailKey: true, previewKey: true, previewStamp: true },
   });
 }
 

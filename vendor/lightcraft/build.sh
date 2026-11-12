@@ -5,6 +5,8 @@
 set -euo pipefail
 
 TAG=v0.20.0
+# The commit the tag pointed to when we audited it: a moved tag stops the build instead of shipping other code.
+COMMIT=192ff72923c39e6623f2c7ff67ab3a119deb8071
 VERSION=0.20.0-bentclick.2   # keep equal to LIGHTCRAFT_VERSION in src/lib/security/csp.ts
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SITE="$(cd "$HERE/../.." && pwd)"
@@ -14,6 +16,7 @@ OUT="$SITE/public/lightcraft/$VERSION"
 # autocrlf off: the patches have LF line endings, as the repository does
 git clone --quiet --depth 1 --branch "$TAG" -c core.autocrlf=false https://github.com/storytold/lightcraft.git "$WORK"
 cd "$WORK"
+[ "$(git rev-parse HEAD)" = "$COMMIT" ] || { echo "tag $TAG no longer points at $COMMIT: review the new code before building" >&2; exit 1; }
 git apply "$HERE"/patches/*.patch
 
 rustup toolchain install 1.95 --profile minimal
@@ -26,6 +29,9 @@ cargo +1.95 xtask web
 rm -rf "$OUT" && mkdir -p "$OUT"
 cp -r target/web-site/{index.html,lightcraft_web.js,lightcraft_web_bg.wasm,worker.js,snippets} "$OUT/"
 cp LICENSE-MIT LICENSE-APACHE NOTICE assets/fonts/OFL-Inter.txt "$OUT/"
+
+# The hashes the test (src/lib/security/lightcraft-artifacts.test.ts) checks: a file swapped in public/ fails CI.
+node "$HERE/hash-artifacts.mjs" "$VERSION" > "$HERE/SHA256SUMS.json"
 
 echo "Built $OUT"
 echo "If index.html's inline script changed, update LIGHTCRAFT_INLINE_SCRIPT_HASH (the csp test prints the new one)."

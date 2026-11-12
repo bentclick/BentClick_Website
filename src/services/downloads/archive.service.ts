@@ -44,7 +44,7 @@ export async function requestArchive(req: ArchiveRequest): Promise<{ jobId: stri
 
   // Keyed by the object delivered: a new edit must never reuse a ZIP holding the previous version.
   const fingerprint = sha256(`${req.quality}:${photos.map((p) => `${p.id}@${p.storageKey}`).sort().join(",")}`);
-  const reusable = await findReusableJob(prisma, req.collectionId, fingerprint, new Date(Date.now() + 60 * 60 * 1000), req.clientSessionId ?? null);
+  const reusable = await findReusableJob(prisma, req.collectionId, fingerprint, new Date(Date.now() + 60 * 60 * 1000), req.clientSessionId ?? null, req.requestedByUserId ?? null);
   if (reusable) return { jobId: reusable.id };
 
   const sized = photos.map((p) => ({ id: p.id, bytes: Number(p.fileSize) }));

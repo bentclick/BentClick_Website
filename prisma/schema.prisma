@@ -123,6 +123,7 @@ enum ActivityType {
   LINK_REGENERATED
   LINK_DISABLED
   PASSWORD_CHANGED
+  GALLERY_LOCKED // too many wrong passwords from visitors: the photographer is told
 }
 
 // ─────────────────────────────────────────────────────────────

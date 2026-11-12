@@ -31,7 +31,7 @@ export async function listSelections(userId: string, collectionId: string): Prom
 export async function getSelection(userId: string, clientSessionId: string) {
   const session = await findOwnedClientSession(prisma, userId, clientSessionId);
   if (!session) throw new NotFoundError("Selection");
-  return { session, photos: await sessionFavoritePhotos(session.id) };
+  return { session, photos: await sessionFavoritePhotos(session.id, null) }; // the owner sees every preview
 }
 
 /** Plain list of original filenames — pasted straight into Lightroom's filter. */

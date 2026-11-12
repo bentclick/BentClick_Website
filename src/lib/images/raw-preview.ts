@@ -10,13 +10,20 @@ const EOI = Buffer.from([0xff, 0xd9]);
 const MIN_EDGE = 640;
 
 export type EmbeddedJpeg = { start: number; end: number; width: number; height: number };
+/** A frame whose image data never ends: no later one can end either, since the search ran to the end of the file. */
+const UNTERMINATED = "unterminated" as const;
+/**
+ * Start markers tried per file. Real RAWs embed a handful of JPEGs and sensor data holds a few hundred false starts;
+ * a crafted file can hold millions, each costing a header walk (it ran a whole 60 s processing function).
+ */
+const MAX_CANDIDATES = 20_000;
 
 /**
  * Reads one JPEG's headers. Only baseline/extended/progressive frames count:
  * lossless JPEG (SOF3) is how CR2 and DNG store the sensor data itself, which
  * no image viewer can open. Walking segments also skips EXIF thumbnails.
  */
-function parseJpegAt(buffer: Buffer, start: number): EmbeddedJpeg | null {
+function parseJpegAt(buffer: Buffer, start: number): EmbeddedJpeg | typeof UNTERMINATED | null {
   let position = start + 2;
   let width = 0;
   let height = 0;
@@ -33,7 +40,7 @@ function parseJpegAt(buffer: Buffer, start: number): EmbeddedJpeg | null {
     if (marker === 0xda) {
       if (!width || !height) return null;
       const end = buffer.indexOf(EOI, position + 2 + length);
-      return end === -1 ? null : { start, end: end + 2, width, height };
+      return end === -1 ? UNTERMINATED : { start, end: end + 2, width, height };
     }
     if (marker === 0xc0 || marker === 0xc1 || marker === 0xc2) {
       if (position + 9 > buffer.length) return null;
@@ -53,10 +60,11 @@ function parseJpegAt(buffer: Buffer, start: number): EmbeddedJpeg | null {
 export function findLargestEmbeddedJpeg(raw: Buffer): EmbeddedJpeg | null {
   let best: EmbeddedJpeg | null = null;
   let from = 0;
-  for (;;) {
+  for (let tried = 0; tried < MAX_CANDIDATES; tried++) {
     const start = raw.indexOf(SOI, from);
     if (start === -1) return best;
     const jpeg = parseJpegAt(raw, start);
+    if (jpeg === UNTERMINATED) return best;
     if (!jpeg) {
       from = start + 1;
       continue;
@@ -64,6 +72,7 @@ export function findLargestEmbeddedJpeg(raw: Buffer): EmbeddedJpeg | null {
     if (Math.min(jpeg.width, jpeg.height) >= MIN_EDGE && (!best || jpeg.width * jpeg.height > best.width * best.height)) best = jpeg;
     from = jpeg.end;
   }
+  return best;
 }
 
 function tiffOrientation(buffer: Buffer, base: number): number | null {

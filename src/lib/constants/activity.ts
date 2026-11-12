@@ -34,6 +34,8 @@ export function describeActivity(type: ActivityType, who: string | null, metadat
       return "Link desativado";
     case "PASSWORD_CHANGED":
       return metadata?.enabled ? "Senha definida ou alterada" : "Senha removida";
+    case "GALLERY_LOCKED":
+      return "Galeria bloqueada por 1 hora: muitas senhas erradas";
   }
 }
 

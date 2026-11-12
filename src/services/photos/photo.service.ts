@@ -1,4 +1,5 @@
 import "server-only";
+import { retireArchivesWithPhotos } from "@/services/maintenance/maintenance.service";
 import { prisma } from "@/lib/db/prisma";
 import { deleteObjects } from "@/lib/r2/objects";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
@@ -53,9 +54,11 @@ export async function deletePhotos(userId: string, photoIds: string[]): Promise<
       p.thumbnailKey,
       p.editedKey,
       parsePendingEdit(p.pendingEdit)?.key,
-      ...deliveryKeys({ id: p.id, userId, collectionId: p.collectionId }),
+      ...deliveryKeys({ id: p.id, userId, collectionId: p.collectionId, editedKey: p.editedKey }),
     ].filter((k): k is string => Boolean(k))),
   );
+
+  await retireArchivesWithPhotos(photos.map((p) => p.id));
 
   await prisma.$transaction(async (tx) => {
     await deletePhotoRows(tx, photos.map((p) => p.id));

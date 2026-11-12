@@ -28,9 +28,14 @@ vendor/lightcraft/build.sh /caminho/para/uma/pasta/vazia
 
 O script clona a tag, aplica os patches, compila com `cargo xtask web` e copia o resultado para `public/lightcraft/<versão>`.
 
+**Origem conferida.** O editor roda dentro do painel, com a sua sessão, e por isso pode chamar a API do site como você. Dois cuidados:
+
+- O script confere que a tag ainda aponta para o commit auditado (`COMMIT`). Se alguém mover a tag, a compilação para.
+- No fim, o script grava `SHA256SUMS.json` com o hash de cada arquivo gerado. O teste `src/lib/security/lightcraft-artifacts.test.ts` reprova se qualquer arquivo de `public/lightcraft` mudar sem passar pelo script.
+
 ## Ao atualizar
 
-1. Ajuste `TAG` e `VERSION` em `build.sh`.
+1. Ajuste `TAG`, `COMMIT` (o commit da tag nova, depois de revisar o que mudou) e `VERSION` em `build.sh`.
 2. Ajuste `LIGHTCRAFT_VERSION` em `src/lib/security/csp.ts`. A pasta antiga sai de `public/lightcraft`.
 3. Tire os patches que a versão oficial já incorporou.
 4. Confira se o patch `0002` ainda cobre todas as telas: procure "ArtCraft" no código de `crates/ui-egui` e nas traduções.

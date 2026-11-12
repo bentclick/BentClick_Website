@@ -31,10 +31,14 @@ export function listReadyPhotosForArchive(db: Db, collectionId: string, filter: 
   });
 }
 
-/** Same photos and quality, and — for favourites — the same visitor session (another visitor could not open it). */
-export function findReusableJob(db: Db, collectionId: string, fingerprint: string, minExpiry: Date, clientSessionId: string | null) {
+/**
+ * Same photos and quality, the same visitor session for favourites (another visitor could not open it), and the same
+ * audience: the photographer's job is built from the originals, a client's from the edited files, so one is never
+ * handed to the other (a part built later would follow the job's audience, not the requester's).
+ */
+export function findReusableJob(db: Db, collectionId: string, fingerprint: string, minExpiry: Date, clientSessionId: string | null, requestedByUserId: string | null) {
   return db.downloadJob.findFirst({
-    where: { collectionId, fingerprint, clientSessionId, status: { in: ["QUEUED", "PROCESSING", "READY"] }, expiresAt: { gt: minExpiry } },
+    where: { collectionId, fingerprint, clientSessionId, requestedByUserId, status: { in: ["QUEUED", "PROCESSING", "READY"] }, expiresAt: { gt: minExpiry } },
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });

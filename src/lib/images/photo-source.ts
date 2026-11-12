@@ -40,3 +40,18 @@ export function clientDeliverable<T extends Deliverable>(photo: T): T {
 export function clientFilename(photo: { filename: string; editedFilename: string | null }): string {
   return photo.editedFilename ?? photo.filename;
 }
+
+/** The collection's watermark look, as stamped on each preview rendered with it; null without a watermark. */
+export function watermarkStamp(watermark: { id: string; version: number } | null | undefined): string | null {
+  return watermark ? `${watermark.id}:${watermark.version}` : null;
+}
+
+/**
+ * The large image a visitor may see. A preview rendered before the current watermark (it was just set or changed and
+ * the re-render hasn't reached this photo yet) is a clean 2048 px copy: until then the visitor gets the thumbnail.
+ * Without a watermark any preview is fine.
+ */
+export function visiblePreviewKey(photo: { previewKey: string | null; previewStamp: string | null; thumbnailKey: string | null }, stamp: string | null): string | null {
+  if (stamp && photo.previewStamp !== stamp) return photo.thumbnailKey;
+  return photo.previewKey;
+}

@@ -1,14 +1,16 @@
 import "server-only";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
-import { clientFilename } from "@/lib/images/photo-source";
+import { clientFilename, visiblePreviewKey, watermarkStamp } from "@/lib/images/photo-source";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
 import { CLIENT_SESSION_DAYS, readGalleryToken, writeGalleryToken } from "@/lib/security/gallery-cookie";
 import { verifyGalleryPassword } from "@/lib/security/password";
 import { clientIpHash } from "@/lib/security/client-ip";
-import { consumeRateLimit, enforceRateLimit, isRateLimited } from "@/lib/security/rate-limit";
+import { consumeRateLimit, consumeRateLimitWindow, enforceRateLimit, refundRateLimit } from "@/lib/security/rate-limit";
 import { generateSessionToken, sha256 } from "@/lib/security/tokens";
+import { notifyGalleryLocked } from "@/services/email/email.service";
 import { DomainError, NotFoundError } from "@/services/errors";
 import type { PhotoPage, PublicGalleryView } from "@/types/public-gallery";
 import { type AccessDecision, decideAccess } from "./access-rules";
@@ -78,7 +80,8 @@ export async function identifyVisitor(slug: string, identity: { clientName: stri
   await setSessionIdentity(prisma, sessionId, identity);
 }
 
-export async function photoPage(collectionId: string, galleryId: string, cursor?: string): Promise<PhotoPage> {
+/** `stamp`: the collection's current watermark (watermarkStamp), so no preview rendered before it is handed out. */
+export async function photoPage(collectionId: string, galleryId: string, stamp: string | null, cursor?: string): Promise<PhotoPage> {
   const rows = await listReadyPhotos(prisma, collectionId, galleryId, PHOTO_PAGE_SIZE, cursor);
   const page = rows.slice(0, PHOTO_PAGE_SIZE);
   const photos = await Promise.all(
@@ -89,7 +92,7 @@ export async function photoPage(collectionId: string, galleryId: string, cursor?
       height: p.height ?? 2,
       color: p.dominantColor,
       thumbUrl: (await signDisplayUrl(p.thumbnailKey)) ?? "",
-      previewUrl: (await signDisplayUrl(p.previewKey)) ?? "",
+      previewUrl: (await signDisplayUrl(visiblePreviewKey(p, stamp))) ?? "",
     })),
   );
   return { photos, nextCursor: rows.length > PHOTO_PAGE_SIZE ? (page.at(-1)?.id ?? null) : null };
@@ -108,7 +111,7 @@ export async function buildGalleryView(resolved: ResolvedGallery): Promise<Publi
     eventDate: collection.eventDate?.toISOString() ?? null,
     layout: collection.layout,
     preview: decision.kind === "GRANTED" && decision.preview,
-    coverUrl: await signDisplayUrl(cover?.previewKey),
+    coverUrl: await signDisplayUrl(cover ? visiblePreviewKey(cover, watermarkStamp(collection.watermark)) : null),
     coverColor: cover?.dominantColor ?? null,
     studio: { name: profile?.brandName ?? collection.user.name, accent: profile?.accentColor ?? "#A27B5C" },
     features: {
@@ -123,7 +126,7 @@ export async function buildGalleryView(resolved: ResolvedGallery): Promise<Publi
       return { name: session?.clientName ?? null, email: session?.clientEmail ?? null, selectionClosed: Boolean(session?.selectionSubmittedAt) };
     })(),
     galleries: galleries.map((g) => ({ id: g.id, name: g.name, count: g._count.photos })),
-    firstPage: first ? await photoPage(collection.id, first.id) : { photos: [], nextCursor: null },
+    firstPage: first ? await photoPage(collection.id, first.id, watermarkStamp(collection.watermark)) : { photos: [], nextCursor: null },
   };
 }
 
@@ -171,17 +174,21 @@ export async function unlockWithPassword(slug: string, password: string) {
   if (!collection.passwordHash) return;
 
   const { ipHash } = await requestMeta();
-  const lockKey = `gallery-pw-fail:${collection.id}`;
-  if (await isRateLimited(lockKey, WRONG_PASSWORDS_PER_GALLERY)) {
-    throw new DomainError("GALLERY_LOCKED", "Muitas tentativas erradas nesta galeria. Por segurança, ela fica bloqueada por até 1 hora. Se você é o cliente, fale com o fotógrafo.");
-  }
   if (!(await consumeRateLimit(`gallery-pw:${collection.id}:${ipHash}`, PASSWORD_TRIES_PER_IP, PASSWORD_IP_WINDOW))) {
     throw new DomainError("RATE_LIMITED", "Muitas tentativas. Aguarde alguns minutos e tente de novo.");
   }
+  // Counted before checking, in one atomic step, and given back when right: a burst from many IPs can't all pass
+  // a read-then-count check before the first failure lands.
+  const lockKey = `gallery-pw-fail:${collection.id}`;
+  const attempt = await consumeRateLimitWindow(lockKey, WRONG_PASSWORDS_PER_GALLERY, GALLERY_LOCK_WINDOW);
+  if (!attempt.allowed) {
+    throw new DomainError("GALLERY_LOCKED", "Muitas tentativas erradas nesta galeria. Por segurança, ela fica bloqueada por até 1 hora. Se você é o cliente, fale com o fotógrafo.");
+  }
   if (!(await verifyGalleryPassword(collection.passwordHash, password))) {
-    await consumeRateLimit(lockKey, WRONG_PASSWORDS_PER_GALLERY, GALLERY_LOCK_WINDOW);
+    if (attempt.count === WRONG_PASSWORDS_PER_GALLERY) after(() => notifyGalleryLocked(collection.id));
     throw new DomainError("WRONG_PASSWORD", "Senha incorreta.");
   }
+  await refundRateLimit(lockKey);
   // Upgrade the visitor's existing session so favourites made before a password change survive.
   const current = resolved.session;
   if (current && current.accessVersion === collection.accessVersion && current.expiresAt.getTime() > Date.now()) {

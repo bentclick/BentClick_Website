@@ -2,7 +2,7 @@ import "server-only";
 import type { EmailStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db/prisma";
 import { defaultFrom, sendEmail } from "@/lib/email/resend";
-import { galleryReadyEmail, leadReceivedEmail, selectionSubmittedEmail } from "@/lib/email/templates";
+import { galleryLockedEmail, galleryReadyEmail, leadReceivedEmail, selectionSubmittedEmail } from "@/lib/email/templates";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { openSecret } from "@/lib/security/secret-box";
 import { galleryUrl } from "@/lib/utils/urls";
@@ -56,7 +56,9 @@ export async function sendGalleryEmail(userId: string, input: { collectionId: st
 
   if (!result.ok) {
     await prisma.emailLog.update({ where: { id: log.id }, data: { status: "FAILED", error: result.error.slice(0, 500) } });
-    throw new DomainError("EMAIL_FAILED", `Não foi possível enviar: ${result.error}`);
+    // The provider's text stays in the log (email_log.error); the dashboard gets a sentence of ours.
+    console.error("[email] gallery email failed", result.error);
+    throw new DomainError("EMAIL_FAILED", "Não foi possível enviar o e-mail agora. Confira o endereço e tente de novo em alguns minutos.");
   }
   await prisma.$transaction(async (tx) => {
     await tx.emailLog.update({ where: { id: log.id }, data: { status: "SENT", providerMessageId: result.id } });
@@ -93,6 +95,21 @@ export async function notifySelectionSubmitted(collectionId: string, clientName:
     await sendEmail({ from: defaultFrom(studio.name), to: studio.ownerEmail, subject: `Nova seleção — ${collection.title}`, html, text, replyTo: clientEmail });
   } catch (error) {
     console.error("[email] selection notification failed", error);
+  }
+}
+
+/** Best effort, once per lock: the gallery shut out password guesses for an hour; the photographer may want a new one. */
+export async function notifyGalleryLocked(collectionId: string) {
+  try {
+    const collection = await prisma.collection.findUnique({ where: { id: collectionId }, select: { id: true, title: true, userId: true } });
+    if (!collection) return;
+    await logActivity(prisma, { userId: collection.userId, collectionId: collection.id, actorType: "SYSTEM", type: "GALLERY_LOCKED" });
+    const studio = await studioOf(collection.userId);
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+    const { html, text } = galleryLockedEmail({ studio: studio.name, accent: studio.accent, title: collection.title, url: `${appUrl}/dashboard/collections/${collection.id}/settings` });
+    await sendEmail({ from: defaultFrom(studio.name), to: studio.ownerEmail, subject: `Senhas erradas — ${collection.title}`, html, text });
+  } catch (error) {
+    console.error("[email] gallery lock notification failed", error);
   }
 }
 

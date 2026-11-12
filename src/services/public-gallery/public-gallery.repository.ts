@@ -23,7 +23,8 @@ export function findCollectionBySlug(db: Db, slug: string) {
       requireClientIdentity: true,
       downloadQuality: true,
       layout: true,
-      coverPhoto: { select: { previewKey: true, dominantColor: true, status: true } },
+      coverPhoto: { select: { previewKey: true, previewStamp: true, thumbnailKey: true, dominantColor: true, status: true } },
+      watermark: { select: { id: true, version: true } },
       user: { select: { name: true, profile: { select: { brandName: true, accentColor: true } } } },
     },
   });
@@ -47,7 +48,7 @@ export function listReadyPhotos(db: Db, collectionId: string, galleryId: string,
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
     take: take + 1,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    select: { id: true, filename: true, editedFilename: true, width: true, height: true, dominantColor: true, thumbnailKey: true, previewKey: true },
+    select: { id: true, filename: true, editedFilename: true, width: true, height: true, dominantColor: true, thumbnailKey: true, previewKey: true, previewStamp: true },
   });
 }
 

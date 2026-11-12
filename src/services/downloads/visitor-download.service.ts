@@ -86,8 +86,12 @@ async function visitorJob(slug: string, jobId: string) {
   return { resolved, job };
 }
 
+/** The dialog polls every couple of seconds; each poll may resume packing, so a script hammering it is cut off. */
+const STATUS_POLLS_PER_MINUTE = 60;
+
 export async function visitorArchiveStatus(slug: string, jobId: string): Promise<{ status: ArchiveStatus; needsWork: boolean }> {
   const { job } = await visitorJob(slug, jobId);
+  await enforceRateLimit(`zip-poll:${job.id}:${await clientIpHash()}`, STATUS_POLLS_PER_MINUTE, 60);
   return { status: toArchiveStatus(job), needsWork: needsWork(job) };
 }
 

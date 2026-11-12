@@ -1,4 +1,5 @@
 import "server-only";
+import { retireArchivesWithPhotos } from "@/services/maintenance/maintenance.service";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { type Derivatives, InvalidImageError, renderDerivatives } from "@/lib/images/derivatives";
@@ -75,6 +76,7 @@ async function removeReplaced(photo: EditablePhoto, kept: { previewKey: string; 
   const stale = [photo.editedKey, photo.previewKey !== kept.previewKey ? photo.previewKey : null, photo.thumbnailKey !== kept.thumbnailKey ? photo.thumbnailKey : null];
   try {
     await deleteObjects([...stale.filter((k): k is string => Boolean(k)), ...deliveryKeys(photo)]);
+    await retireArchivesWithPhotos([photo.id]);
   } catch (error) {
     console.error("[photo-edit] cleanup failed", photo.id, error);
   }

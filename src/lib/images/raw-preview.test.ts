@@ -70,3 +70,14 @@ describe("readRawOrientation", () => {
     expect(readRawOrientation(tiffWithOrientation(99))).toBeNull();
   });
 });
+
+describe("findLargestEmbeddedJpeg on a crafted file", () => {
+  it("stays fast when frames never end (it ran a 60 s function to its limit)", () => {
+    // SOI + SOF0 (800x600) + SOS, repeated, with no end marker anywhere: each one used to search to the end of the file.
+    const frame = Buffer.from([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x02, 0x58, 0x03, 0x20, 0x03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xda, 0x00, 0x08, 0, 0, 0, 0, 0, 0]);
+    const crafted = Buffer.concat(Array.from({ length: 100_000 }, () => frame)); // ~3 MB
+    const started = performance.now();
+    expect(findLargestEmbeddedJpeg(crafted)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+});

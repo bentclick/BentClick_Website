@@ -1,7 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { clientFilename } from "@/lib/images/photo-source";
+import { clientFilename, visiblePreviewKey, watermarkStamp } from "@/lib/images/photo-source";
 import { signDisplayUrl } from "@/lib/r2/signed-urls";
 import { clientIpHash } from "@/lib/security/client-ip";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -67,7 +67,7 @@ export async function favoriteIdsFor(resolved: ResolvedGallery): Promise<string[
   return sessionId ? listSessionFavoriteIds(prisma, sessionId) : [];
 }
 
-export async function sessionFavoritePhotos(clientSessionId: string): Promise<PublicPhoto[]> {
+export async function sessionFavoritePhotos(clientSessionId: string, stamp: string | null): Promise<PublicPhoto[]> {
   const rows = await listSessionFavoritePhotos(prisma, clientSessionId);
   return Promise.all(
     rows.map(async (p) => ({
@@ -77,7 +77,7 @@ export async function sessionFavoritePhotos(clientSessionId: string): Promise<Pu
       height: p.height ?? 2,
       color: p.dominantColor,
       thumbUrl: (await signDisplayUrl(p.thumbnailKey)) ?? "",
-      previewUrl: (await signDisplayUrl(p.previewKey)) ?? "",
+      previewUrl: (await signDisplayUrl(visiblePreviewKey(p, stamp))) ?? "",
     })),
   );
 }
@@ -85,7 +85,7 @@ export async function sessionFavoritePhotos(clientSessionId: string): Promise<Pu
 export async function listMyFavorites(slug: string): Promise<PublicPhoto[]> {
   const resolved = await requireFavoritesAccess(slug);
   const sessionId = validSessionId(resolved);
-  return sessionId ? sessionFavoritePhotos(sessionId) : [];
+  return sessionId ? sessionFavoritePhotos(sessionId, watermarkStamp(resolved.collection.watermark)) : [];
 }
 
 /** The client hands the selection to the photographer with a name and email. */

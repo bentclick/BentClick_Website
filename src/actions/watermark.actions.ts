@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { type ActionResult, ok, toActionError } from "@/lib/actions/result";
 import { assertUser } from "@/lib/auth/session";
 import { idSchema } from "@/lib/validation/common";
 import { watermarkSchema } from "@/lib/validation/watermark";
-import { setCollectionWatermark } from "@/services/photos/preview-refresh.service";
+import { collectionsUsingWatermark, refreshInBackground, setCollectionWatermark } from "@/services/photos/preview-refresh.service";
 import { createWatermark, deleteWatermark, updateWatermark } from "@/services/watermarks/watermark.service";
 
 /** FormData carries the settings as JSON plus an optional logo file. */
@@ -27,7 +28,9 @@ export async function saveWatermarkAction(form: FormData): Promise<ActionResult<
     const { data, logo } = readForm(form);
     const id = form.get("watermarkId");
     if (typeof id === "string" && id) {
-      await updateWatermark(user.id, idSchema.parse(id), data, logo);
+      const watermarkId = idSchema.parse(id);
+      await updateWatermark(user.id, watermarkId, data, logo);
+      after(async () => refreshInBackground(user.id, await collectionsUsingWatermark(user.id, watermarkId)));
       revalidate();
       return ok({ id });
     }
@@ -57,6 +60,7 @@ export async function setCollectionWatermarkAction(input: unknown): Promise<Acti
     const user = await assertUser();
     const { collectionId, watermarkId } = collectionWatermarkSchema.parse(input);
     const result = await setCollectionWatermark(user.id, collectionId, watermarkId || null);
+    if (result.outdated > 0) after(() => refreshInBackground(user.id, [collectionId]));
     revalidatePath(`/dashboard/collections/${collectionId}`, "layout");
     return ok(result);
   } catch (error) {

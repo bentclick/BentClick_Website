@@ -1,4 +1,5 @@
 import "server-only";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { getR2 } from "@/lib/r2/client";
 import { deleteObjects } from "@/lib/r2/objects";
@@ -33,21 +34,31 @@ export async function cleanupPendingUploads(now = new Date()): Promise<number> {
   return stale.length;
 }
 
-/** ZIP archives live 72 h; afterwards the objects go and the job is marked expired. */
-export async function purgeExpiredArchives(now = new Date()): Promise<number> {
-  const jobs = await prisma.downloadJob.findMany({
-    where: { expiresAt: { lte: now }, status: { not: "FAILED" } },
-    select: { id: true, parts: { select: { zipStorageKey: true } } },
-    take: 200,
-  });
+/** Deletes the ZIP objects of these jobs and marks them failed: their links stop working at once. */
+async function retireJobs(where: Prisma.DownloadJobWhereInput, reason: string, take = 200): Promise<number> {
+  const jobs = await prisma.downloadJob.findMany({ where: { ...where, status: { not: "FAILED" } }, select: { id: true, parts: { select: { zipStorageKey: true } } }, take });
   if (jobs.length === 0) return 0;
   const keys = jobs.flatMap((j) => j.parts.map((p) => p.zipStorageKey)).filter((k): k is string => Boolean(k));
   if (getR2() && keys.length) await deleteObjects(keys);
   await prisma.$transaction([
     prisma.downloadArchivePart.updateMany({ where: { jobId: { in: jobs.map((j) => j.id) } }, data: { zipStorageKey: null } }),
-    prisma.downloadJob.updateMany({ where: { id: { in: jobs.map((j) => j.id) } }, data: { status: "FAILED", error: "Arquivo expirado" } }),
+    prisma.downloadJob.updateMany({ where: { id: { in: jobs.map((j) => j.id) } }, data: { status: "FAILED", error: reason } }),
   ]);
   return jobs.length;
+}
+
+/** ZIP archives live 72 h; afterwards the objects go and the job is marked expired. */
+export function purgeExpiredArchives(now = new Date()): Promise<number> {
+  return retireJobs({ expiresAt: { lte: now } }, "Arquivo expirado");
+}
+
+/**
+ * A ZIP built with a photo that was deleted or replaced by a new edit must not keep handing it out for the rest of its
+ * 72 h (a client asked for the photo to be removed; an old edit is not what the photographer delivers now).
+ */
+export function retireArchivesWithPhotos(photoIds: string[]): Promise<number> {
+  if (photoIds.length === 0) return Promise.resolve(0);
+  return retireJobs({ parts: { some: { photoIds: { hasSome: photoIds } } } }, "Uma foto do arquivo mudou", 1000);
 }
 
 export async function pruneRateLimits(now = new Date()): Promise<number> {

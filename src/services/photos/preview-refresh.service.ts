@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { displaySource, previewVersion } from "@/lib/images/photo-source";
+import { displaySource, previewVersion, watermarkStamp } from "@/lib/images/photo-source";
 import { renderOriginal } from "@/lib/images/raw-derivatives";
 import { applyWatermark } from "@/lib/images/watermark";
 import { r2Keys } from "@/lib/r2/keys";
@@ -20,7 +20,7 @@ function outdatedWhere(collectionId: string, stamp: string | null): Prisma.Photo
 
 async function currentStamp(collectionId: string) {
   const c = await prisma.collection.findUnique({ where: { id: collectionId }, select: { watermark: { select: { id: true, version: true } } } });
-  return c?.watermark ? `${c.watermark.id}:${c.watermark.version}` : null;
+  return watermarkStamp(c?.watermark);
 }
 
 export async function countOutdatedPreviews(collectionId: string): Promise<number> {
@@ -60,6 +60,27 @@ export async function refreshPreviews(userId: string, collectionId: string, budg
     }
   }
   return { remaining: await prisma.photo.count({ where: outdatedWhere(collection.id, stamp) }), refreshed };
+}
+
+/**
+ * After a watermark is chosen or edited, from the server (`after` the action), so it no longer depends on the
+ * photographer keeping the dashboard open. Visitors never get an outdated preview meanwhile (visiblePreviewKey); a
+ * very large collection that outlasts the budget is finished by the dashboard's refresher as before.
+ */
+export async function refreshInBackground(userId: string, collectionIds: string[]): Promise<void> {
+  for (const collectionId of collectionIds) {
+    try {
+      await refreshPreviews(userId, collectionId, 50_000);
+    } catch (error) {
+      console.error("[previews] background refresh failed", collectionId, error);
+    }
+  }
+}
+
+/** The owner's collections that use a watermark (after it was edited). */
+export async function collectionsUsingWatermark(userId: string, watermarkId: string): Promise<string[]> {
+  const rows = await prisma.collection.findMany({ where: { userId, watermarkId }, select: { id: true } });
+  return rows.map((r) => r.id);
 }
 
 /** Choosing (or removing) a collection's watermark; previews are refreshed afterwards. */

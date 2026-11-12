@@ -20,9 +20,13 @@ export const r2Keys = {
     `${collectionRoot(userId, collectionId)}/edited/${photoId}.${token}.${extension}`,
   archive: (userId: string, downloadJobId: string) => `${root(userId)}/archives/${downloadJobId}.zip`,
   archivePart: (userId: string, downloadJobId: string, index: number) => `${root(userId)}/archives/${downloadJobId}/parte-${index + 1}.zip`,
-  /** Lazily rendered download copies (high-res / web), cached next to the original. */
-  downloadVariant: (userId: string, collectionId: string, photoId: string, variant: "high" | "web") =>
-    `${collectionRoot(userId, collectionId)}/downloads/${variant}/${photoId}.jpg`,
+  /**
+   * Lazily rendered download copies (high-res / web), cached next to the original. `source` names the file they were
+   * rendered from (the original, or one edit): a copy of an old edit written late can never be served for a new one.
+   * Without it, the key of the copies made before that rule (still deleted with the photo).
+   */
+  downloadVariant: (userId: string, collectionId: string, photoId: string, variant: "high" | "web", source?: string) =>
+    `${collectionRoot(userId, collectionId)}/downloads/${variant}/${photoId}${source ? `.${source}` : ""}.jpg`,
   brandAsset: (userId: string, name: string, extension: string) => `${root(userId)}/brand/${name}.${extension}`,
   watermarkImage: (userId: string, watermarkId: string, version: number, extension: string) => `${root(userId)}/brand/watermark-${watermarkId}-v${version}.${extension}`,
   portfolioOriginal: (userId: string, albumId: string, imageId: string, extension: string) =>
