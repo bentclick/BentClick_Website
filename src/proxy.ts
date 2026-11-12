@@ -17,10 +17,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
-  if (pathname === "/login" && hasSession) {
-    return NextResponse.redirect(new URL("/dashboard/collections", request.url));
-  }
-
   return withCsp(request);
 }
 
@@ -36,5 +32,5 @@ function withCsp(request: NextRequest) {
 
 // Same areas as STRICT_PREFIXES in lib/security/csp.ts; a test compares them.
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/esqueci-senha", "/redefinir-senha", "/g/:path*"],
+  matcher: ["/dashboard/:path*", "/login", "/ativar-2fa", "/esqueci-senha", "/redefinir-senha", "/g/:path*"],
 };

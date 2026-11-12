@@ -101,7 +101,13 @@ describe("summarizeCspReport", () => {
       JSON.stringify({ "csp-report": { "document-uri": "https://x.test/g/a?token=SECRET", "violated-directive": "img-src", "blocked-uri": "https://evil.test/p.png?X-Amz-Signature=SECRET" } }),
     );
     expect(JSON.stringify(summary)).not.toContain("SECRET");
-    expect(summary).toEqual({ page: "https://x.test/g/a", directive: "img-src", blocked: "https://evil.test/p.png" });
+    expect(summary).toEqual({ page: "https://x.test/g/[slug]", directive: "img-src", blocked: "https://evil.test/p.png" });
+  });
+
+  it("hides the gallery slug, which opens a gallery without a password", () => {
+    const summary = summarizeCspReport(JSON.stringify({ "csp-report": { "document-uri": "https://x.test/g/Ab3dEf6hIj9K/favoritas", "violated-directive": "img-src", "blocked-uri": "inline" } }));
+    expect(summary?.page).toBe("https://x.test/g/[slug]/favoritas");
+    expect(JSON.stringify(summary)).not.toContain("Ab3dEf6hIj9K");
   });
 
   it("ignores unreadable bodies", () => {

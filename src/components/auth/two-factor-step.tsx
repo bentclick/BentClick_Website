@@ -11,7 +11,6 @@ import { twoFactorCodeSchema } from "@/lib/validation/auth";
 export function TwoFactorStep({ onVerified, onCancel }: { onVerified: () => void; onCancel: () => void }) {
   const [backup, setBackup] = useState(false);
   const [code, setCode] = useState("");
-  const [trustDevice, setTrustDevice] = useState(false);
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
 
@@ -22,8 +21,8 @@ export function TwoFactorStep({ onVerified, onCancel }: { onVerified: () => void
     setPending(true);
     setError(undefined);
     const result = backup
-      ? await authClient.twoFactor.verifyBackupCode({ code: parsed.data, trustDevice })
-      : await authClient.twoFactor.verifyTotp({ code: parsed.data, trustDevice });
+      ? await authClient.twoFactor.verifyBackupCode({ code: parsed.data })
+      : await authClient.twoFactor.verifyTotp({ code: parsed.data });
     setPending(false);
     if (result.error) {
       setError(
@@ -61,10 +60,6 @@ export function TwoFactorStep({ onVerified, onCancel }: { onVerified: () => void
         />
         <FieldError message={error} />
       </div>
-      <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
-        <input type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)} className="accent-[var(--accent)]" />
-        Confiar neste dispositivo por 30 dias
-      </label>
       <Button type="submit" variant="primary" size="lg" disabled={pending} className="w-full">
         {pending ? <Loader2 className="animate-spin" /> : null} Confirmar
       </Button>

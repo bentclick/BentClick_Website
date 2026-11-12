@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the installed Better Auth > mounts nothing outside the allowlist that we haven't decided about 1`] = `
+[
+  "/account-info",
+  "/callback/:id",
+  "/change-email",
+  "/delete-user",
+  "/delete-user/callback",
+  "/get-access-token",
+  "/link-social",
+  "/list-accounts",
+  "/list-sessions",
+  "/refresh-token",
+  "/revoke-other-sessions",
+  "/revoke-session",
+  "/revoke-sessions",
+  "/send-verification-email",
+  "/sign-in/social",
+  "/two-factor/get-totp-uri",
+  "/two-factor/send-otp",
+  "/two-factor/verify-otp",
+  "/unlink-account",
+  "/update-session",
+  "/update-user",
+  "/verify-email",
+  "/verify-password",
+]
+`;

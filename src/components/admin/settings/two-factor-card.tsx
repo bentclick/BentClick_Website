@@ -17,6 +17,10 @@ type Step =
   | { kind: "scan"; totpURI: string; backupCodes: string[] }
   | { kind: "codes"; backupCodes: string[] };
 
+/** 403 carries the server's reason ("saia e entre de novo" after 30 min); anything else is the password. */
+const passwordError = (e: { status?: number; message?: string } | null | undefined) =>
+  e?.status === 429 ? "Muitas tentativas. Aguarde um minuto." : e?.status === 403 && e.message ? e.message : "Senha incorreta.";
+
 /** The secret printed under the QR code, for typing into the app by hand. */
 const secretOf = (uri: string) => new URL(uri).searchParams.get("secret") ?? "";
 
@@ -24,7 +28,7 @@ const secretOf = (uri: string) => new URL(uri).searchParams.get("secret") ?? "";
  * Two-step login with an authenticator app. Turning it on needs the password,
  * then a code from the app — 2FA only counts as enabled once a code verifies.
  */
-export function TwoFactorCard({ enabled }: { enabled: boolean }) {
+export function TwoFactorCard({ enabled, onEnabled }: { enabled: boolean; /** The setup page: leave once the backup codes are saved. */ onEnabled?: () => void }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const [password, setPassword] = useState("");
@@ -46,21 +50,21 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
     if (intent === "enable") {
       const r = await authClient.twoFactor.enable({ password, issuer: "BentClick" });
       setPending(false);
-      if (r.error || !r.data) return setError(r.error?.status === 429 ? "Muitas tentativas. Aguarde um minuto." : "Senha incorreta.");
+      if (r.error || !r.data) return setError(passwordError(r.error));
       if (r.data.method !== "totp") return setError("Não foi possível iniciar a configuração.");
       return reset({ kind: "scan", totpURI: r.data.totpURI, backupCodes: r.data.backupCodes });
     }
     if (intent === "disable") {
       const r = await authClient.twoFactor.disable({ password });
       setPending(false);
-      if (r.error) return setError(r.error.status === 429 ? "Muitas tentativas. Aguarde um minuto." : "Senha incorreta.");
-      toast.success("Verificação em duas etapas desativada");
+      if (r.error) return setError(passwordError(r.error));
+      toast.success("Verificação desativada. Ative de novo com o novo aplicativo.");
       reset();
       return router.refresh();
     }
     const r = await authClient.twoFactor.generateBackupCodes({ password });
     setPending(false);
-    if (r.error || !r.data) return setError(r.error?.status === 429 ? "Muitas tentativas. Aguarde um minuto." : "Senha incorreta.");
+    if (r.error || !r.data) return setError(passwordError(r.error));
     reset({ kind: "codes", backupCodes: r.data.backupCodes });
   }
 
@@ -74,7 +78,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
     if (r.error) return setError(r.error.status === 429 ? "Muitas tentativas. Aguarde um minuto." : "Código incorreto. Confira o horário do celular.");
     toast.success("Verificação em duas etapas ativada");
     reset({ kind: "codes", backupCodes });
-    router.refresh();
+    if (!onEnabled) router.refresh(); // on the setup page a refresh would leave before the codes are saved
   }
 
   return (
@@ -87,7 +91,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
         <div className="grid gap-4">
           <p className="flex items-center gap-2 text-[13px]">
             {enabled ? <ShieldCheck className="size-4 text-success" /> : null}
-            {enabled ? "Ativada. O login pede o código do aplicativo." : "Desativada. Recomendamos ativar: protege o painel mesmo se a senha vazar."}
+            {enabled ? "Ativada. O login pede o código do aplicativo." : "Obrigatória para usar o painel: protege as fotos dos clientes mesmo se a senha vazar."}
           </p>
           <div className="flex flex-wrap gap-2">
             {enabled ? (
@@ -96,7 +100,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
                   Gerar novos códigos de reserva
                 </Button>
                 <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => reset({ kind: "password", intent: "disable" })}>
-                  Desativar
+                  Trocar de aplicativo
                 </Button>
               </>
             ) : (
@@ -165,7 +169,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
         </form>
       ) : null}
 
-      {step.kind === "codes" ? <BackupCodes codes={step.backupCodes} onDone={() => reset()} /> : null}
+      {step.kind === "codes" ? <BackupCodes codes={step.backupCodes} onDone={onEnabled ?? (() => reset())} /> : null}
     </SettingsCard>
   );
 }

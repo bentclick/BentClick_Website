@@ -11,7 +11,7 @@
  */
 
 /** Keep equal to the matcher in src/proxy.ts (a test compares them); Next requires that one to be literal. */
-export const STRICT_PREFIXES = ["dashboard", "login", "esqueci-senha", "redefinir-senha", "g"] as const;
+export const STRICT_PREFIXES = ["dashboard", "login", "ativar-2fa", "esqueci-senha", "redefinir-senha", "g"] as const;
 
 /** The RAW editor, our build of LightCraft (vendor/lightcraft): public/lightcraft/<version>. Bumping it means testing it first. */
 export const LIGHTCRAFT_VERSION = "0.20.0-bentclick.2";
@@ -93,7 +93,8 @@ function withoutQuery(value: unknown): string {
   const text = clip(value);
   try {
     const url = new URL(text);
-    return url.origin + url.pathname;
+    // A gallery's slug is its link: for a gallery without a password, whoever reads the logs could open it.
+    return url.origin + url.pathname.replace(/^\/g\/[^/]+/, "/g/[slug]");
   } catch {
     return text;
   }

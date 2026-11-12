@@ -3,6 +3,7 @@
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useSyncExternalStore } from "react";
+import { forwardFrameActivity } from "@/components/auth/session-activity";
 import { Button } from "@/components/ui/button";
 import { type EditorStorage, useEditorStorage } from "@/hooks/use-editor-storage";
 import { useLightcraftEditor } from "@/hooks/use-lightcraft-editor";
@@ -59,7 +60,14 @@ function EditorFrame({ session }: { session: DevelopSession }) {
         {batch ? `Salvar todas (${session.photos.length})` : "Aplicar à foto"}
       </Button>
       {/* store=idb: the library goes where useEditorStorage wipes it (store=memory can't develop a RAW, see editor-storage). */}
-      <iframe ref={frame} src={`${LIGHTCRAFT_BASE}/index.html?host=parent&store=idb`} title={`Editor de ${session.title}`} allow="fullscreen; clipboard-read; clipboard-write" className="absolute inset-x-0 bottom-0 top-12 size-full h-[calc(100%-3rem)] border-0" />
+      {/* Editing happens inside the frame, where the dashboard can't see gestures: forward them (2 h idle rule). */}
+      <iframe
+        ref={frame}
+        onLoad={(e) => {
+          const win = e.currentTarget.contentWindow;
+          if (win) forwardFrameActivity(win); // listeners go away with the frame's document
+        }}
+        src={`${LIGHTCRAFT_BASE}/index.html?host=parent&store=idb`} title={`Editor de ${session.title}`} allow="fullscreen; clipboard-read; clipboard-write" className="absolute inset-x-0 bottom-0 top-12 size-full h-[calc(100%-3rem)] border-0" />
     </>
   );
 }
