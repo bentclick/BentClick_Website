@@ -224,7 +224,7 @@ Changing a collection's watermark re-queues preview regeneration only.
  poll / revalidate grid  ◀──────────────────────────────────────────────────────────
 ```
 
-- **Implemented (Phase 3):** `POST /api/uploads/presign` → browser `PUT` (4 parallel, XHR progress, 2 automatic retries) → `POST /api/uploads/complete` (HEAD-verified) → `POST /api/photos/:id/process`.
+- **Implemented (Phase 3):** `POST /api/uploads/presign` (lots of 8, asked just before their turn — never the whole drop: URLs live 15 min) → browser `PUT` (4 parallel, XHR progress; URL renewed when older than 8 min and on every retry; network/403/429/5xx wait 2–60 s and retry; one automatic pass over the failures when the queue drains, plus "Tentar de novo") → `POST /api/uploads/complete` (HEAD-verified) → `POST /api/photos/:id/process`.
 - **Derivatives run in a Vercel function, one photo per call** (`maxDuration` 60 s, `sharp`), fanned out 3 at a time by the browser right after upload. Bytes flow R2 → function → R2 only; the browser→server upload path never carries photo bytes. Photos left `UPLOADED` by a closed tab are resumed the next time the gallery opens. A queue worker remains the scale-up path for very large batches.
 - Client queue states: `queued → uploading → confirming → processing → done | failed` (`src/lib/uploads/upload-queue.ts`); retry re-requests a fresh presigned URL for the same `photoId` (`/api/uploads/resign`).
 - Content that isn't a real JPEG/PNG/WebP (checked by `sharp`, not the declared MIME) is deleted along with its row.

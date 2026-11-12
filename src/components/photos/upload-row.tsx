@@ -50,8 +50,8 @@ export const UploadRow = memo(function UploadRow({ item, onCancel, onRetry }: Pr
             />
           </span>
         </span>
-        <span className={cn("mt-1 block truncate text-[11px]", failed ? "text-danger" : "text-muted-foreground")}>
-          {failed ? item.error : formatBytes(item.size)}
+        <span className={cn("mt-1 block truncate text-[11px]", failed ? "text-danger" : item.note ? "text-warning" : "text-muted-foreground")}>
+          {failed ? item.error : (item.note ?? formatBytes(item.size))}
         </span>
       </span>
 

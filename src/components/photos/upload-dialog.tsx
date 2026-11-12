@@ -24,13 +24,14 @@ type Props = {
 export function UploadDialog({ open, onOpenChange, destinationLabel, queue, items }: Props) {
   const [tab, setTab] = useState<Tab>("send");
 
-  const { rows, hidden, done, active } = useMemo(() => {
+  const { rows, hidden, done, active, retriable } = useMemo(() => {
     const sorted = [...items].sort((a, b) => ORDER[a.status] - ORDER[b.status]);
     return {
       rows: sorted.slice(0, MAX_ROWS),
       hidden: Math.max(0, sorted.length - MAX_ROWS),
       done: items.filter((i) => i.status === "done").length,
       active: items.filter((i) => i.status !== "done" && i.status !== "failed").length,
+      retriable: items.filter((i) => i.status === "failed" && i.retriable !== false).length,
     };
   }, [items]);
 
@@ -83,6 +84,11 @@ export function UploadDialog({ open, onOpenChange, destinationLabel, queue, item
               </span>
               <span className="flex items-center gap-3 text-muted-foreground tabular-nums">
                 {done} de {items.length} concluídas
+                {retriable > 0 ? (
+                  <button type="button" onClick={() => queue.retryFailed()} className="text-foreground underline-offset-4 hover:underline">
+                    Tentar de novo ({retriable})
+                  </button>
+                ) : null}
                 {active === 0 ? (
                   <button type="button" onClick={() => queue.clearFinished()} className="text-foreground underline-offset-4 hover:underline">
                     Limpar lista
@@ -92,7 +98,7 @@ export function UploadDialog({ open, onOpenChange, destinationLabel, queue, item
             </div>
             <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto px-6 pb-4">
               {rows.map((item) => (
-                <UploadRow key={item.key} item={item} onCancel={() => queue.cancel(item.key)} onRetry={() => void queue.retry(item.key)} />
+                <UploadRow key={item.key} item={item} onCancel={() => queue.cancel(item.key)} onRetry={() => queue.retry(item.key)} />
               ))}
               {hidden > 0 ? <li className="py-3 text-center text-[12px] text-muted-foreground">+ {hidden} na fila</li> : null}
             </ul>

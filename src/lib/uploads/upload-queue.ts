@@ -1,7 +1,11 @@
 import { checkFile } from "./file-types";
 import { putFile, type UploadAdapter, UploadApiError } from "./upload-api";
+import { isTransient, needsFreshUrl, pause, retryDelay, withRetry } from "./upload-retry";
 
 export type UploadStatus = "queued" | "uploading" | "confirming" | "processing" | "done" | "failed";
+
+/** Which step a failed item stopped at, so a retry resumes there instead of starting over. */
+export type UploadStage = "upload" | "confirm" | "process";
 
 export type UploadItem = {
   key: string;
@@ -11,9 +15,16 @@ export type UploadItem = {
   status: UploadStatus;
   progress: number; // 0..1 of the byte transfer
   error?: string;
+  /** Shown while the item is still alive but waiting to try again (connection drop, rate limit). */
+  note?: string;
   photoId?: string;
   url?: string;
   contentType?: string;
+  /** When the current PUT URL was issued (ms); stale URLs are renewed before use. */
+  urlAt?: number;
+  failedAt?: UploadStage;
+  /** Automatic end-of-queue retry passes already spent on this item. */
+  sweeps?: number;
   /** False when retrying can't help (unsupported type, size limit). */
   retriable?: boolean;
   /** Local object URL for the row preview (small images only). */
@@ -24,6 +35,7 @@ const PREVIEW_MAX_BYTES = 12 * 1024 * 1024;
 
 // Decoding hundreds of 20 MB+ originals for 40 px previews would exhaust memory.
 function localPreview(file: File): string | undefined {
+  if (typeof URL.createObjectURL !== "function") return undefined;
   if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > PREVIEW_MAX_BYTES) return undefined;
   return URL.createObjectURL(file);
 }
@@ -34,15 +46,26 @@ function release(item: UploadItem) {
 
 const UPLOAD_CONCURRENCY = 4;
 const PROCESS_CONCURRENCY = 3;
-const PRESIGN_BATCH = 50;
-const AUTO_RETRIES = 2;
+/** URLs are asked for in small lots, just ahead of their turn — never the whole drop at once. */
+export const PRESIGN_BATCH = 8;
+const PRESIGN_AHEAD = UPLOAD_CONCURRENCY;
+/** Automatic passes over the failed items once the rest of the queue is done. */
+const MAX_SWEEPS = 1;
+
+export type UploadQueueDeps = {
+  put?: typeof putFile;
+  sleep?: (ms: number) => Promise<void>;
+  now?: () => number;
+};
 
 let seq = 0;
 
 /**
  * Upload lifecycle on the client (docs/ARCHITECTURE.md §7):
- * queued → presign (batched) → PUT to storage (4 parallel, progress, auto-retry)
- * → confirm (batched) → process derivatives (3 parallel) → done | failed.
+ * queued → presign (small lots, just in time) → PUT to storage (4 parallel,
+ * fresh URL on every retry) → confirm (batched) → process derivatives (3 parallel)
+ * → done | failed. Transient failures (network, expired URL, 429, 5xx) wait and
+ * retry on their own; what still fails gets one more pass when the queue drains.
  * Framework-free; React subscribes through useSyncExternalStore.
  */
 export class UploadQueue {
@@ -57,11 +80,19 @@ export class UploadQueue {
   private processQueue: string[] = [];
   private wasBusy = false;
   private resumed = new Set<string>();
+  private readonly put: typeof putFile;
+  private readonly sleep: (ms: number) => Promise<void>;
+  private readonly now: () => number;
 
   constructor(
     private api: UploadAdapter,
     private hooks: { onPhotoReady?: () => void; onIdle?: (summary: { done: number; failed: number }) => void } = {},
-  ) {}
+    deps: UploadQueueDeps = {},
+  ) {
+    this.put = deps.put ?? putFile;
+    this.sleep = deps.sleep ?? pause;
+    this.now = deps.now ?? Date.now;
+  }
 
   setAdapter(api: UploadAdapter) {
     this.api = api;
@@ -86,6 +117,10 @@ export class UploadQueue {
 
   private get(key: string) {
     return this.items.find((i) => i.key === key);
+  }
+
+  private fail(key: string, stage: UploadStage, e: unknown) {
+    this.patch(key, { status: "failed", failedAt: stage, error: message(e), note: undefined });
   }
 
   add(files: File[]) {
@@ -123,23 +158,41 @@ export class UploadQueue {
     this.emit();
   }
 
-  async retry(key: string) {
-    const item = this.get(key);
-    if (!item || item.status !== "failed") return;
-    if (!item.photoId) {
-      // Never reached the server (validation/presign) — start over.
-      if (!checkFile(item.file).ok) return;
-      this.patch(key, { status: "queued", error: undefined, progress: 0, url: undefined });
-    } else {
-      try {
-        const fresh = await this.api.resign(item.photoId);
-        this.patch(key, { status: "queued", error: undefined, progress: 0, url: fresh.url, contentType: fresh.contentType });
-      } catch (e) {
-        this.patch(key, { error: message(e) });
-        return;
-      }
-    }
+  /** Puts one failed item back where it stopped. */
+  retry(key: string) {
+    this.requeue(key);
+    this.restart();
+  }
+
+  /** Every failed item that a retry can help, in one go. */
+  retryFailed() {
+    for (const item of this.items) this.requeue(item.key);
+    this.restart();
+  }
+
+  private restart() {
     void this.pump();
+    void this.drainProcessing();
+  }
+
+  private requeue(key: string): boolean {
+    const item = this.get(key);
+    if (!item || item.status !== "failed" || item.retriable === false) return false;
+    const reset = { error: undefined, note: undefined, failedAt: undefined };
+    if (item.failedAt === "process" && item.photoId) {
+      this.patch(key, { ...reset, status: "processing" });
+      if (!this.processQueue.includes(item.photoId)) this.processQueue.push(item.photoId);
+    } else if (item.failedAt === "confirm" && item.photoId) {
+      this.patch(key, { ...reset, status: "confirming" });
+      this.queueConfirm(key);
+    } else if (item.photoId) {
+      // Reserved on the server already: upload() asks for a fresh URL first.
+      this.patch(key, { ...reset, status: "queued", progress: 0, urlAt: undefined });
+    } else {
+      if (!checkFile(item.file).ok) return false;
+      this.patch(key, { ...reset, status: "queued", progress: 0, url: undefined });
+    }
+    return true;
   }
 
   /** Resumes derivative generation for photos left UPLOADED by an interrupted session. */
@@ -162,19 +215,27 @@ export class UploadQueue {
 
   private async presignPending() {
     if (this.presigning) return;
+    const waiting = this.items.filter((i) => i.status === "queued" && i.url).length;
+    if (waiting >= PRESIGN_AHEAD) return;
     const batch = this.items.filter((i) => i.status === "queued" && !i.url && !i.photoId).slice(0, PRESIGN_BATCH);
     if (batch.length === 0) return;
     this.presigning = true;
     try {
-      const res = await this.api.presign(batch.map((i) => ({ clientId: i.key, name: i.name, type: i.file.type, size: i.size })));
-      for (const u of res.uploads) this.patch(u.clientId, { url: u.url, photoId: u.photoId, contentType: u.contentType });
+      const files = batch.map((i) => ({ clientId: i.key, name: i.name, type: i.file.type, size: i.size }));
+      const res = await withRetry(() => this.api.presign(files), this.sleep);
+      const at = this.now();
+      for (const u of res.uploads) this.patch(u.clientId, { url: u.url, photoId: u.photoId, contentType: u.contentType, urlAt: at });
       for (const r of res.rejected) this.patch(r.clientId, { status: "failed", error: r.reason, retriable: false });
     } catch (e) {
-      for (const i of batch) this.patch(i.key, { status: "failed", error: message(e) });
+      for (const i of batch) if (this.get(i.key)?.status === "queued") this.fail(i.key, "upload", e);
     } finally {
       this.presigning = false;
     }
-    if (this.items.some((i) => i.status === "queued" && !i.url && !i.photoId)) await this.presignPending();
+  }
+
+  private async refreshUrl(key: string, photoId: string) {
+    const fresh = await withRetry(() => this.api.resign(photoId), this.sleep);
+    this.patch(key, { url: fresh.url, contentType: fresh.contentType, urlAt: this.now() });
   }
 
   private async upload(key: string) {
@@ -186,23 +247,32 @@ export class UploadQueue {
 
     for (let attempt = 0; ; attempt++) {
       try {
-        await putFile(item.url, item.file, item.contentType, (p) => this.patch(key, { progress: p }), controller.signal);
+        const current = this.get(key);
+        if (!current || controller.signal.aborted) return;
+        if (current.photoId && needsFreshUrl(current.urlAt, this.now())) await this.refreshUrl(key, current.photoId);
+        const ready = this.get(key);
+        if (!ready?.url || !ready.contentType || controller.signal.aborted) return;
+        await this.put(ready.url, ready.file, ready.contentType, (p) => this.patch(key, { progress: p }), controller.signal);
         break;
       } catch (e) {
         if (e instanceof DOMException && e.name === "AbortError") return;
-        const retriable = e instanceof UploadApiError && (e.status === 0 || e.status >= 500);
-        if (!retriable || attempt >= AUTO_RETRIES) {
+        const wait = isTransient(e) ? retryDelay(attempt) : null;
+        if (wait === null) {
           this.controllers.delete(key);
-          this.patch(key, { status: "failed", error: message(e) });
+          this.fail(key, "upload", e);
           void this.pump();
           return;
         }
-        await new Promise((r) => setTimeout(r, 1000 * 3 ** attempt));
+        // A dropped or refused PUT may be an expired URL in disguise (R2's 403 has no CORS headers): renew it next time.
+        this.patch(key, { progress: 0, urlAt: undefined, note: `Conexão instável — nova tentativa em ${Math.round(wait / 1000)} s` });
+        await this.sleep(wait);
+        if (controller.signal.aborted) return;
+        this.patch(key, { note: undefined });
       }
     }
 
     this.controllers.delete(key);
-    this.patch(key, { status: "confirming", progress: 1 });
+    this.patch(key, { status: "confirming", progress: 1, note: undefined });
     this.queueConfirm(key);
     void this.pump();
   }
@@ -219,7 +289,7 @@ export class UploadQueue {
     const ids = [...byPhoto.keys()].filter((id): id is string => Boolean(id));
     if (ids.length === 0) return;
     try {
-      const res = await this.api.complete(ids);
+      const res = await withRetry(() => this.api.complete(ids), this.sleep);
       for (const id of res.completed) {
         const k = byPhoto.get(id);
         if (k) this.patch(k, { status: "processing" });
@@ -227,29 +297,29 @@ export class UploadQueue {
       }
       for (const f of res.failed) {
         const k = byPhoto.get(f.photoId);
-        if (k) this.patch(k, { status: "failed", error: f.reason });
+        if (k) this.patch(k, { status: "failed", failedAt: "confirm", error: f.reason });
       }
     } catch (e) {
-      for (const k of keys) this.patch(k, { status: "failed", error: message(e) });
+      for (const k of keys) this.fail(k, "confirm", e);
     }
     void this.drainProcessing();
+    this.checkIdle();
   }
 
   private async drainProcessing() {
     while (this.processing < PROCESS_CONCURRENCY && this.processQueue.length > 0) {
       const photoId = this.processQueue.shift()!;
       this.processing++;
-      void this.api
-        .process(photoId)
+      void withRetry(() => this.api.process(photoId), this.sleep)
         .then((r) => {
           const key = this.items.find((i) => i.photoId === photoId)?.key;
           if (!key) return;
           if (r.status === "READY" || r.status === "UPLOADED") this.patch(key, { status: "done" });
-          else this.patch(key, { status: "failed", error: r.reason ?? "Falha ao processar" });
+          else this.patch(key, { status: "failed", failedAt: "process", error: r.reason ?? "Falha ao processar" });
         })
         .catch((e) => {
           const key = this.items.find((i) => i.photoId === photoId)?.key;
-          if (key) this.patch(key, { status: "failed", error: message(e) });
+          if (key) this.fail(key, "process", e);
         })
         .finally(() => {
           this.processing--;
@@ -260,12 +330,28 @@ export class UploadQueue {
     }
   }
 
+  /** One more pass over what failed, now that the queue is quiet — most of these were a passing hiccup. */
+  private sweepFailed(): boolean {
+    let any = false;
+    for (const item of this.items) {
+      if (item.status !== "failed" || (item.sweeps ?? 0) >= MAX_SWEEPS) continue;
+      const sweeps = (item.sweeps ?? 0) + 1;
+      if (this.requeue(item.key)) {
+        this.patch(item.key, { sweeps });
+        any = true;
+      }
+    }
+    if (any) this.restart();
+    return any;
+  }
+
   private checkIdle() {
     const busy = this.items.some((i) => i.status === "queued" || i.status === "uploading" || i.status === "confirming" || i.status === "processing");
-    if (busy || this.processing > 0 || this.processQueue.length > 0) {
+    if (busy || this.processing > 0 || this.processQueue.length > 0 || this.presigning) {
       this.wasBusy = true;
       return;
     }
+    if (this.wasBusy && this.sweepFailed()) return;
     if (this.wasBusy) {
       this.wasBusy = false;
       this.hooks.onIdle?.({
@@ -277,5 +363,6 @@ export class UploadQueue {
 }
 
 function message(e: unknown): string {
+  if (e instanceof UploadApiError && e.status === 429) return "O servidor pediu uma pausa. Tente de novo em um minuto.";
   return e instanceof Error ? e.message : "Erro inesperado";
 }
