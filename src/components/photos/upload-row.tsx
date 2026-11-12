@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils/cn";
 import { formatBytes } from "@/lib/utils/format";
 
 const STATUS_LABEL: Record<UploadItem["status"], string> = {
+  checking: "Conferindo…",
+  skipped: "Já enviada",
   queued: "Na fila",
   uploading: "Enviando…",
   confirming: "Confirmando…",
@@ -19,7 +21,7 @@ type Props = { item: UploadItem; onCancel: () => void; onRetry: () => void };
 
 export const UploadRow = memo(function UploadRow({ item, onCancel, onRetry }: Props) {
   const thumb = item.previewUrl;
-  const pct = Math.round((item.status === "done" || item.status === "processing" || item.status === "confirming" ? 1 : item.progress) * 100);
+  const pct = Math.round((item.status === "done" || item.status === "skipped" || item.status === "processing" || item.status === "confirming" ? 1 : item.progress) * 100);
   const failed = item.status === "failed";
 
   return (
@@ -50,7 +52,7 @@ export const UploadRow = memo(function UploadRow({ item, onCancel, onRetry }: Pr
             />
           </span>
         </span>
-        <span className={cn("mt-1 block truncate text-[11px]", failed ? "text-danger" : item.note ? "text-warning" : "text-muted-foreground")}>
+        <span className={cn("mt-1 block truncate text-[11px]", failed ? "text-danger" : item.note && item.status === "uploading" ? "text-warning" : "text-muted-foreground")}>
           {failed ? item.error : (item.note ?? formatBytes(item.size))}
         </span>
       </span>
@@ -58,6 +60,8 @@ export const UploadRow = memo(function UploadRow({ item, onCancel, onRetry }: Pr
       <span className="grid size-8 shrink-0 place-items-center">
         {item.status === "done" ? (
           <Check aria-label="Enviada" className="size-4 text-success" />
+        ) : item.status === "skipped" ? (
+          <Check aria-label="Já estava na galeria" className="size-4 text-muted-foreground" />
         ) : item.status === "processing" || item.status === "confirming" ? (
           <Loader2 aria-label="Processando" className="size-4 animate-spin text-muted-foreground" />
         ) : failed && item.retriable === false ? null : failed ? (

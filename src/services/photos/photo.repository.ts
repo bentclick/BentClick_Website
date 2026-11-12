@@ -12,6 +12,14 @@ export function insertPendingPhotos(db: Db, rows: Prisma.PhotoCreateManyInput[])
   return db.photo.createMany({ data: rows });
 }
 
+/** Photos in a gallery carrying one of these stored names — the duplicate check compares name + size. */
+export function findGalleryPhotosByName(db: Db, userId: string, galleryId: string, names: string[]) {
+  return db.photo.findMany({
+    where: { userId, galleryId, originalFilename: { in: names, mode: "insensitive" } },
+    select: { id: true, originalFilename: true, fileSize: true, status: true, createdAt: true, storageKey: true, mimeType: true },
+  });
+}
+
 /** Photos owned by `userId`, in a given state — every browser-supplied id goes through this. */
 export function findOwnedPhotos(db: Db, userId: string, photoIds: string[], status?: Prisma.PhotoWhereInput["status"]) {
   return db.photo.findMany({

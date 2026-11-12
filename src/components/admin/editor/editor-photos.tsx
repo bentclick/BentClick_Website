@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useEditedVersions } from "@/hooks/use-edited-versions";
 import { useUploadQueue } from "@/hooks/use-upload-queue";
+import { isFinished } from "@/lib/uploads/upload-queue";
 import { collectionUploadAdapter } from "@/lib/uploads/upload-api";
 import { cn } from "@/lib/utils/cn";
 import type { EditorPhoto } from "@/types/photo";
@@ -72,7 +73,7 @@ export function EditorPhotos({ collectionId, gallery, photos, coverPhotoId }: Pr
     [queue],
   );
 
-  const active = items.filter((i) => i.status !== "done" && i.status !== "failed").length;
+  const active = items.filter((i) => !isFinished(i.status)).length;
   const done = items.filter((i) => i.status === "done").length;
 
   function toggle(id: string) {

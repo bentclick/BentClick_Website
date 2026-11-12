@@ -35,9 +35,11 @@ export function useUploadQueue(adapter: UploadAdapter) {
     const refreshSoon = throttled(() => router.refresh());
     return new UploadQueue(adapter, {
       onPhotoReady: refreshSoon,
-      onIdle: ({ done, failed }) => {
+      onIdle: ({ done, failed, skipped }) => {
         router.refresh();
-        if (done > 0) toast.success("Envio concluído", { description: `${done} ${done === 1 ? "foto enviada" : "fotos enviadas"}` });
+        const sent = done > 0 ? `${done} ${done === 1 ? "foto enviada" : "fotos enviadas"}` : "Nenhuma foto nova";
+        const already = skipped > 0 ? ` · ${skipped} já ${skipped === 1 ? "estava" : "estavam"} na galeria` : "";
+        if (done > 0 || skipped > 0) toast.success("Envio concluído", { description: sent + already });
         if (failed > 0) {
           toast.error(`${failed} ${failed === 1 ? "arquivo não foi enviado" : "arquivos não foram enviados"}`, {
             description: "Tente novamente pelo painel de envio.",

@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import type { UploadItem, UploadQueue } from "@/lib/uploads/upload-queue";
+import { isFinished, type UploadItem, type UploadQueue } from "@/lib/uploads/upload-queue";
 import { cn } from "@/lib/utils/cn";
 import { Dropzone } from "./dropzone";
 import { UploadRow } from "./upload-row";
 
-const ORDER: Record<UploadItem["status"], number> = { failed: 0, uploading: 1, confirming: 2, processing: 3, queued: 4, done: 5 };
+const ORDER: Record<UploadItem["status"], number> = { failed: 0, uploading: 1, confirming: 2, processing: 3, checking: 4, queued: 5, done: 6, skipped: 7 };
 const MAX_ROWS = 80;
 
 type Tab = "send" | "drive" | "folder";
@@ -24,13 +24,15 @@ type Props = {
 export function UploadDialog({ open, onOpenChange, destinationLabel, queue, items }: Props) {
   const [tab, setTab] = useState<Tab>("send");
 
-  const { rows, hidden, done, active, retriable } = useMemo(() => {
+  const { rows, hidden, done, active, retriable, skipped, checking } = useMemo(() => {
     const sorted = [...items].sort((a, b) => ORDER[a.status] - ORDER[b.status]);
     return {
       rows: sorted.slice(0, MAX_ROWS),
       hidden: Math.max(0, sorted.length - MAX_ROWS),
       done: items.filter((i) => i.status === "done").length,
-      active: items.filter((i) => i.status !== "done" && i.status !== "failed").length,
+      active: items.filter((i) => !isFinished(i.status)).length,
+      skipped: items.filter((i) => i.status === "skipped").length,
+      checking: items.filter((i) => i.status === "checking").length,
       retriable: items.filter((i) => i.status === "failed" && i.retriable !== false).length,
     };
   }, [items]);
@@ -78,12 +80,17 @@ export function UploadDialog({ open, onOpenChange, destinationLabel, queue, item
 
         {items.length > 0 ? (
           <div className="mt-5 flex min-h-0 flex-1 flex-col border-t border-border">
-            <div className="flex items-center justify-between px-6 py-3 text-[12px]">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-6 py-3 text-[12px]">
               <span className="font-medium">
-                {active > 0 ? `Enviando ${items.length} ${items.length === 1 ? "foto" : "fotos"}` : "Envio finalizado"}
+                {checking > 0
+                  ? `Conferindo ${checking} ${checking === 1 ? "foto" : "fotos"} na galeria…`
+                  : active > 0
+                    ? `Enviando ${items.length} ${items.length === 1 ? "foto" : "fotos"}`
+                    : "Envio finalizado"}
               </span>
               <span className="flex items-center gap-3 text-muted-foreground tabular-nums">
-                {done} de {items.length} concluídas
+                {done + skipped} de {items.length} concluídas
+                {skipped > 0 ? <span>({skipped} já {skipped === 1 ? "estava" : "estavam"} na galeria)</span> : null}
                 {retriable > 0 ? (
                   <button type="button" onClick={() => queue.retryFailed()} className="text-foreground underline-offset-4 hover:underline">
                     Tentar de novo ({retriable})

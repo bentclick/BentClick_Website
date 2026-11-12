@@ -1,4 +1,4 @@
-import type { CompleteResponse, PresignRequest, PresignResponse } from "@/lib/validation/upload";
+import type { CompleteResponse, DuplicateCheckRequest, DuplicateCheckResponse, PresignRequest, PresignResponse } from "@/lib/validation/upload";
 
 /** Browser-side calls to the upload routes. Errors carry the server's user-facing message. */
 export class UploadApiError extends Error {
@@ -25,6 +25,8 @@ export type UploadAdapter = {
   resign: (id: string) => Promise<{ url: string; contentType: string }>;
   complete: (ids: string[]) => Promise<CompleteResponse>;
   process: (id: string) => Promise<{ status: string; reason?: string }>;
+  /** Which files the destination already holds; destinations without it rely on the in-list check. */
+  check?: (files: DuplicateCheckRequest["files"]) => Promise<DuplicateCheckResponse>;
 };
 
 export function collectionUploadAdapter(target: { collectionId: string; galleryId: string }): UploadAdapter {
@@ -33,6 +35,7 @@ export function collectionUploadAdapter(target: { collectionId: string; galleryI
     resign: (photoId) => post("/api/uploads/resign", { photoId }),
     complete: (photoIds) => post<CompleteResponse>("/api/uploads/complete", { photoIds }),
     process: (photoId) => post(`/api/photos/${photoId}/process`, {}),
+    check: (files) => post<DuplicateCheckResponse>("/api/uploads/check", { ...target, files }),
   };
 }
 

@@ -1,8 +1,14 @@
+import { uploadFileKey } from "./duplicates";
 import { checkFile } from "./file-types";
 import { putFile, type UploadAdapter, UploadApiError } from "./upload-api";
 import { isTransient, needsFreshUrl, pause, retryDelay, withRetry } from "./upload-retry";
 
-export type UploadStatus = "queued" | "uploading" | "confirming" | "processing" | "done" | "failed";
+export type UploadStatus = "checking" | "queued" | "uploading" | "confirming" | "processing" | "done" | "skipped" | "failed";
+
+/** Finished one way or another: nothing more will happen to it without the photographer. */
+export const isFinished = (status: UploadStatus) => status === "done" || status === "skipped" || status === "failed";
+
+export type UploadSummary = { done: number; failed: number; skipped: number };
 
 /** Which step a failed item stopped at, so a retry resumes there instead of starting over. */
 export type UploadStage = "upload" | "confirm" | "process";
@@ -49,8 +55,12 @@ const PROCESS_CONCURRENCY = 3;
 /** URLs are asked for in small lots, just ahead of their turn — never the whole drop at once. */
 export const PRESIGN_BATCH = 8;
 const PRESIGN_AHEAD = UPLOAD_CONCURRENCY;
+/** Files per duplicate check call (the route takes up to MAX_CHECK_FILES). */
+const CHECK_BATCH = 1000;
 /** Automatic passes over the failed items once the rest of the queue is done. */
 const MAX_SWEEPS = 1;
+
+const SKIPPED = { status: "skipped" as const, progress: 1, note: "Já está na galeria — pulada", error: undefined };
 
 export type UploadQueueDeps = {
   put?: typeof putFile;
@@ -62,7 +72,7 @@ let seq = 0;
 
 /**
  * Upload lifecycle on the client (docs/ARCHITECTURE.md §7):
- * queued → presign (small lots, just in time) → PUT to storage (4 parallel,
+ * checking (already in the gallery? → skipped) → queued → presign (small lots, just in time) → PUT to storage (4 parallel,
  * fresh URL on every retry) → confirm (batched) → process derivatives (3 parallel)
  * → done | failed. Transient failures (network, expired URL, 429, 5xx) wait and
  * retry on their own; what still fails gets one more pass when the queue drains.
@@ -86,7 +96,7 @@ export class UploadQueue {
 
   constructor(
     private api: UploadAdapter,
-    private hooks: { onPhotoReady?: () => void; onIdle?: (summary: { done: number; failed: number }) => void } = {},
+    private hooks: { onPhotoReady?: () => void; onIdle?: (summary: UploadSummary) => void } = {},
     deps: UploadQueueDeps = {},
   ) {
     this.put = deps.put ?? putFile;
@@ -123,23 +133,65 @@ export class UploadQueue {
     this.patch(key, { status: "failed", failedAt: stage, error: message(e), note: undefined });
   }
 
+  /**
+   * Accepts a whole folder, even one dropped before: a file already in this list is
+   * not added again (a failed one is retried instead), and the destination is asked
+   * which of the rest it already holds before anything is reserved.
+   */
   add(files: File[]) {
+    const inList = new Map(this.items.map((i) => [uploadFileKey(i.name, i.size), i.key]));
+    const toCheck: string[] = [];
     for (const file of files) {
+      const id = uploadFileKey(file.name, file.size);
+      const existing = inList.get(id);
+      if (existing) {
+        this.requeue(existing);
+        continue;
+      }
       const check = checkFile(file);
+      const key = `u${++seq}`;
+      inList.set(id, key);
       this.items.push({
-        key: `u${++seq}`,
+        key,
         file,
         name: file.name,
         size: file.size,
-        status: check.ok ? "queued" : "failed",
+        status: !check.ok ? "failed" : this.api.check ? "checking" : "queued",
         progress: 0,
         error: check.ok ? undefined : check.reason,
         retriable: check.ok,
         previewUrl: localPreview(file),
       });
+      if (check.ok && this.api.check) toCheck.push(key);
     }
     this.emit();
-    void this.pump();
+    if (toCheck.length > 0) void this.checkExisting(toCheck);
+    this.restart();
+  }
+
+  /** Marks what the destination already holds as skipped; if the check fails the files just go ahead (presign refuses duplicates too). */
+  private async checkExisting(keys: string[]) {
+    const check = this.api.check;
+    for (let i = 0; i < keys.length; i += CHECK_BATCH) {
+      const chunk = keys
+        .slice(i, i + CHECK_BATCH)
+        .map((k) => this.get(k))
+        .filter((it): it is UploadItem => it?.status === "checking");
+      if (chunk.length === 0) continue;
+      let duplicates = new Set<string>();
+      try {
+        if (check) duplicates = new Set((await withRetry(() => check(chunk.map((it) => ({ clientId: it.key, name: it.name, size: it.size }))), this.sleep)).duplicates);
+      } catch {
+        // Unknown: let them through.
+      }
+      const verdict = new Map(chunk.map((it) => [it.key, duplicates.has(it.key)] as const));
+      this.items = this.items.map((it) => {
+        if (it.status !== "checking" || !verdict.has(it.key)) return it;
+        return verdict.get(it.key) ? { ...it, ...SKIPPED } : { ...it, status: "queued" as const };
+      });
+      this.emit();
+      void this.pump();
+    }
   }
 
   cancel(key: string) {
@@ -152,7 +204,7 @@ export class UploadQueue {
   }
 
   clearFinished() {
-    const finished = (i: UploadItem) => i.status === "done" || i.status === "failed";
+    const finished = (i: UploadItem) => isFinished(i.status);
     this.items.filter(finished).forEach(release);
     this.items = this.items.filter((i) => !finished(i));
     this.emit();
@@ -171,6 +223,8 @@ export class UploadQueue {
   }
 
   private restart() {
+    // Work was just handed over: even if it all finishes before the next check (a lot of duplicates), report it.
+    if (this.items.some((i) => !isFinished(i.status))) this.wasBusy = true;
     void this.pump();
     void this.drainProcessing();
   }
@@ -213,21 +267,27 @@ export class UploadQueue {
     this.checkIdle();
   }
 
+  /** Keeps a few URLs ready ahead of the uploads; a lot that turns out to be all duplicates moves straight on to the next. */
   private async presignPending() {
     if (this.presigning) return;
-    const waiting = this.items.filter((i) => i.status === "queued" && i.url).length;
-    if (waiting >= PRESIGN_AHEAD) return;
-    const batch = this.items.filter((i) => i.status === "queued" && !i.url && !i.photoId).slice(0, PRESIGN_BATCH);
-    if (batch.length === 0) return;
     this.presigning = true;
     try {
-      const files = batch.map((i) => ({ clientId: i.key, name: i.name, type: i.file.type, size: i.size }));
-      const res = await withRetry(() => this.api.presign(files), this.sleep);
-      const at = this.now();
-      for (const u of res.uploads) this.patch(u.clientId, { url: u.url, photoId: u.photoId, contentType: u.contentType, urlAt: at });
-      for (const r of res.rejected) this.patch(r.clientId, { status: "failed", error: r.reason, retriable: false });
-    } catch (e) {
-      for (const i of batch) if (this.get(i.key)?.status === "queued") this.fail(i.key, "upload", e);
+      for (;;) {
+        const waiting = this.items.filter((i) => i.status === "queued" && i.url).length;
+        if (waiting >= PRESIGN_AHEAD) break;
+        const batch = this.items.filter((i) => i.status === "queued" && !i.url && !i.photoId).slice(0, PRESIGN_BATCH);
+        if (batch.length === 0) break;
+        try {
+          const files = batch.map((i) => ({ clientId: i.key, name: i.name, type: i.file.type, size: i.size }));
+          const res = await withRetry(() => this.api.presign(files), this.sleep);
+          const at = this.now();
+          for (const u of res.uploads) this.patch(u.clientId, { url: u.url, photoId: u.photoId, contentType: u.contentType, urlAt: at });
+          for (const r of res.rejected) this.patch(r.clientId, r.duplicate ? SKIPPED : { status: "failed", error: r.reason, retriable: false });
+        } catch (e) {
+          for (const i of batch) if (this.get(i.key)?.status === "queued") this.fail(i.key, "upload", e);
+          break;
+        }
+      }
     } finally {
       this.presigning = false;
     }
@@ -346,7 +406,7 @@ export class UploadQueue {
   }
 
   private checkIdle() {
-    const busy = this.items.some((i) => i.status === "queued" || i.status === "uploading" || i.status === "confirming" || i.status === "processing");
+    const busy = this.items.some((i) => i.status === "checking" || i.status === "queued" || i.status === "uploading" || i.status === "confirming" || i.status === "processing");
     if (busy || this.processing > 0 || this.processQueue.length > 0 || this.presigning) {
       this.wasBusy = true;
       return;
@@ -357,6 +417,7 @@ export class UploadQueue {
       this.hooks.onIdle?.({
         done: this.items.filter((i) => i.status === "done").length,
         failed: this.items.filter((i) => i.status === "failed").length,
+        skipped: this.items.filter((i) => i.status === "skipped").length,
       });
     }
   }
